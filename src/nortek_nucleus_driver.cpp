@@ -38,28 +38,92 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
 
     DataSeriesId data_series = static_cast<DataSeriesId>(header.data_series_id);
     switch (data_series) {
-        case DataSeriesId::ImuData:
+        case DataSeriesId::ImuData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            ImuData imu_data{};
+            std::memcpy(&imu_data, nucleus_buf_.data(), sizeof(ImuData))    ;
             break;
-        case DataSeriesId::MagnometerData:
+        }
+        case DataSeriesId::MagnometerData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            MagnetoMeterData magnometer_data{};
+            std::memcpy(&magnometer_data, nucleus_buf_.data(),
+                        sizeof(MagnetoMeterData));
             break;
-        case DataSeriesId::FieldCalibrationData:
+        }
+        case DataSeriesId::FieldCalibrationData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            FieldCalibrationData field_calibration_data{};
+            std::memcpy(&field_calibration_data, nucleus_buf_.data(),
+                        sizeof(FieldCalibrationData));
             break;
-        case DataSeriesId::FastPressureData:
+        }
+        case DataSeriesId::FastPressureData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            FastPressureData fast_pressure_data{};
+            std::memcpy(&fast_pressure_data, nucleus_buf_.data(),
+                        sizeof(FastPressureData));
             break;
-        case DataSeriesId::StringData:
+        }
+        case DataSeriesId::StringData: {
             break;
-        case DataSeriesId::AltimeterData:
+        }
+        case DataSeriesId::AltimeterData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            AltimeterData altimeter_data{};
+            std::memcpy(&altimeter_data, nucleus_buf_.data(),
+                        sizeof(AltimeterData));
             break;
-        case DataSeriesId::BottomTrackData:
+        }
+        case DataSeriesId::BottomTrackData: {
             break;
+        }
         case DataSeriesId::WaterTrackData:
             break;
         case DataSeriesId::CurrentProfileData:
             break;
-        case DataSeriesId::AhrsData:
+        case DataSeriesId::AhrsData: {
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            AhrsDataV2 ahrs_data{};
+            std::memcpy(&ahrs_data, nucleus_buf_.data(),
+                        sizeof(AhrsDataV2));
             break;
-        case DataSeriesId::InsData:
+        }
+        case DataSeriesId::InsData:{
+            CommonData common_data_header{};
+            std::memcpy(&common_data_header,
+                        nucleus_buf_.data() + sizeof(HeaderData),
+                        sizeof(common_data_header));
+
+            InsDataV2 ins_data_v2{};
+            std::memcpy(&ins_data_v2, nucleus_buf_.data(),
+                        sizeof(InsDataV2));
             break;
+        }
         default:
             break;
     }
