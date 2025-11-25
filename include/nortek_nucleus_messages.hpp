@@ -3,6 +3,22 @@
 
 #include <cstdint>
 
+
+enum class DataSeriesId : uint8_t {
+
+    ImuData = 0x82,
+    MagnometerData = 0x87,
+    FieldCalibrationData = 0x8B,
+    FastPressureData = 0x96,
+    StringData = 0xA0,
+    AltimeterData = 0xAA,
+    BottomTrackData = 0xB4,
+    WaterTrackData = 0xBE,
+    CurrentProfileData = 0xC0,
+    AhrsData = 0xD2,
+    InsData = 0xDC,
+};
+
 struct HeaderData {
     uint8_t sync_byte;
     uint8_t header_size;
