@@ -12,8 +12,8 @@
 
 NortekNucleusDriver::NortekNucleusDriver(
 
-    asio::io_context& io)
-    : nucleus_sock_(io) {}
+    asio::io_context& io, std::function<void(NortekNucleusFrame)> callback)
+    : nucleus_sock_(io), callback_(callback) {}
 
 std::error_code NortekNucleusDriver::open_tcp_sockets(
     const ConnectionParams& params) {
