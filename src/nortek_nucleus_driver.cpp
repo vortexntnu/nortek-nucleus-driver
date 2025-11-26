@@ -1,7 +1,10 @@
 
 #include "nortek_nucleus_driver.hpp"
+#include <sys/stat.h>
 #include <asio/streambuf.hpp>
 #include <asio/write.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include "nortek_nucleus_messages.hpp"
 
@@ -33,95 +36,92 @@ void NortekNucleusDriver::start_read(void) {
                   std::placeholders::_2));
 }
 
+template <typename T>
+T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "read_from_buffer requires trivially copyable types");
+
+    if (offset + sizeof(T) > len) {
+        return {};
+    }
+
+    T value{};
+    std::memcpy(&value, data + offset, sizeof(T));
+    return value;
+}
+
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
                                     std::size_t len) {
     HeaderData header{};
     std::memcpy(&header, nucleus_buf_.data(), sizeof(HeaderData));
+    std::size_t offset = sizeof(HeaderData);
 
     DataSeriesId data_series = static_cast<DataSeriesId>(header.data_series_id);
+
+    if (data_series != DataSeriesId::StringData ||
+        data_series != DataSeriesId::SpectrumDataV3) {
+        CommonData common_data_header = read_from_buffer<CommonData>(
+            nucleus_buf_.data(), nucleus_buf_.size(), offset);
+        offset += sizeof(CommonData);
+    }
+
     switch (data_series) {
         case DataSeriesId::ImuData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            ImuData imu_data{};
-            std::memcpy(&imu_data, nucleus_buf_.data(), sizeof(ImuData));
+            ImuData imu_data = read_from_buffer<ImuData>(
+                nucleus_buf_.data(), nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::MagnometerData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            MagnetoMeterData magnometer_data{};
-            std::memcpy(&magnometer_data, nucleus_buf_.data(),
-                        sizeof(MagnetoMeterData));
+            MagnetoMeterData magnometer_data =
+                read_from_buffer<MagnetoMeterData>(nucleus_buf_.data(),
+                                                   nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            FieldCalibrationData field_calibration_data{};
-            std::memcpy(&field_calibration_data, nucleus_buf_.data(),
-                        sizeof(FieldCalibrationData));
+            FieldCalibrationData field_calibration_data =
+                read_from_buffer<FieldCalibrationData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::FastPressureData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            FastPressureData fast_pressure_data{};
-            std::memcpy(&fast_pressure_data, nucleus_buf_.data(),
-                        sizeof(FastPressureData));
+            FastPressureData fast_pressure_data =
+                read_from_buffer<FastPressureData>(nucleus_buf_.data(),
+                                                   nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::StringData: {
             break;
         }
         case DataSeriesId::AltimeterData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            AltimeterData altimeter_data{};
-            std::memcpy(&altimeter_data, nucleus_buf_.data(),
-                        sizeof(AltimeterData));
+            AltimeterData altimeter_data = read_from_buffer<AltimeterData>(
+                nucleus_buf_.data(), nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::BottomTrackData: {
+            BottomTrackData bottom_track_data =
+                read_from_buffer<BottomTrackData>(nucleus_buf_.data(),
+                                                  nucleus_buf_.size(), offset);
             break;
         }
-        case DataSeriesId::WaterTrackData:
+        case DataSeriesId::WaterTrackData: {
+            WaterTrackData water_track_data = read_from_buffer<WaterTrackData>(
+                nucleus_buf_.data(), nucleus_buf_.size(), offset);
             break;
-        case DataSeriesId::CurrentProfileData:
+        }
+        case DataSeriesId::CurrentProfileData: {
             break;
+        }
         case DataSeriesId::AhrsData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            AhrsDataV2 ahrs_data{};
-            std::memcpy(&ahrs_data, nucleus_buf_.data(), sizeof(AhrsDataV2));
+            AhrsDataV2 ahrs_data = read_from_buffer<AhrsDataV2>(
+                nucleus_buf_.data(), nucleus_buf_.size(), offset);
             break;
         }
         case DataSeriesId::InsData: {
-            CommonData common_data_header{};
-            std::memcpy(&common_data_header,
-                        nucleus_buf_.data() + sizeof(HeaderData),
-                        sizeof(common_data_header));
-
-            InsDataV2 ins_data_v2{};
-            std::memcpy(&ins_data_v2, nucleus_buf_.data(), sizeof(InsDataV2));
+            InsDataV2 ins_data = read_from_buffer<InsDataV2>(
+                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            break;
+        }
+        case DataSeriesId::SpectrumDataV3: {
             break;
         }
         default:

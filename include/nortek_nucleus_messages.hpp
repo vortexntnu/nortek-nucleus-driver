@@ -6,6 +6,7 @@
 
 enum class DataSeriesId : uint8_t {
 
+    SpectrumDataV3 = 0x20,
     ImuData = 0x82,
     MagnometerData = 0x87,
     FieldCalibrationData = 0x8B,
