@@ -69,18 +69,21 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
         case DataSeriesId::ImuData: {
             ImuData imu_data = read_from_buffer<ImuData>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            callback_(imu_data);
             break;
         }
         case DataSeriesId::MagnometerData: {
             MagnetoMeterData magnometer_data =
                 read_from_buffer<MagnetoMeterData>(nucleus_buf_.data(),
                                                    nucleus_buf_.size(), offset);
+            callback_(magnometer_data);
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
             FieldCalibrationData field_calibration_data =
                 read_from_buffer<FieldCalibrationData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            callback_(field_calibration_data);
             break;
         }
         case DataSeriesId::FastPressureData: {
@@ -90,6 +93,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             FastPressureData fast_pressure_data =
                 read_from_buffer<FastPressureData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            callback_(fast_pressure_data);
             break;
         }
         case DataSeriesId::StringData: {
@@ -99,22 +103,26 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             payload.assign(
                 reinterpret_cast<char*>(nucleus_buf_.data() + header_offset),
                 data_size);
+            callback_(payload);
             break;
         }
         case DataSeriesId::AltimeterData: {
             AltimeterData altimeter_data = read_from_buffer<AltimeterData>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            callback_(altimeter_data);
             break;
         }
         case DataSeriesId::BottomTrackData: {
             BottomTrackData bottom_track_data =
                 read_from_buffer<BottomTrackData>(nucleus_buf_.data(),
                                                   nucleus_buf_.size(), offset);
+            callback_(bottom_track_data);
             break;
         }
         case DataSeriesId::WaterTrackData: {
             WaterTrackData water_track_data = read_from_buffer<WaterTrackData>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            callback_(water_track_data);
             break;
         }
         case DataSeriesId::CurrentProfileData: {
@@ -135,6 +143,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
         case DataSeriesId::AhrsData: {
             AhrsDataV2 ahrs_data = read_from_buffer<AhrsDataV2>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            callback_(ahrs_data);
             break;
         }
         case DataSeriesId::InsData: {
