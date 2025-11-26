@@ -1,5 +1,7 @@
 
 #include "nortek_nucleus_driver.hpp"
+#include <asio/streambuf.hpp>
+#include <asio/write.hpp>
 #include <cstring>
 #include "nortek_nucleus_messages.hpp"
 
@@ -45,7 +47,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
                         sizeof(common_data_header));
 
             ImuData imu_data{};
-            std::memcpy(&imu_data, nucleus_buf_.data(), sizeof(ImuData))    ;
+            std::memcpy(&imu_data, nucleus_buf_.data(), sizeof(ImuData));
             break;
         }
         case DataSeriesId::MagnometerData: {
@@ -109,22 +111,44 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
                         sizeof(common_data_header));
 
             AhrsDataV2 ahrs_data{};
-            std::memcpy(&ahrs_data, nucleus_buf_.data(),
-                        sizeof(AhrsDataV2));
+            std::memcpy(&ahrs_data, nucleus_buf_.data(), sizeof(AhrsDataV2));
             break;
         }
-        case DataSeriesId::InsData:{
+        case DataSeriesId::InsData: {
             CommonData common_data_header{};
             std::memcpy(&common_data_header,
                         nucleus_buf_.data() + sizeof(HeaderData),
                         sizeof(common_data_header));
 
             InsDataV2 ins_data_v2{};
-            std::memcpy(&ins_data_v2, nucleus_buf_.data(),
-                        sizeof(InsDataV2));
+            std::memcpy(&ins_data_v2, nucleus_buf_.data(), sizeof(InsDataV2));
             break;
         }
         default:
             break;
     }
+}
+
+std::error_code NortekNucleusDriver::send_command(const std::string& cmd) {
+    std::error_code error_code{};
+    std::string msg = cmd + "\r\n";
+    asio::write(nucleus_sock_, asio::buffer(msg), error_code);
+
+    asio::streambuf buf{};
+    asio::read_until(nucleus_sock_, buf, "\r\n", error_code);
+    if (error_code)
+        return error_code;
+
+    std::istream istream(&buf);
+    std::string resp;
+    std::getline(istream, resp);
+
+    if (!resp.empty() && resp.back() == '\r')
+        resp.pop_back();
+
+    if (resp != "OK") {
+        return std::make_error_code(std::errc::protocol_error);
+    }
+
+    return {};
 }

@@ -18,8 +18,11 @@ class NortekNucleusDriver {
 
     void start_read(void);
 
+    std::error_code send_command(const std::string& cmd);
+
    private:
     void read_data(const std::error_code& error_code, std::size_t n);
+
     asio::ip::tcp::socket nucleus_sock_;
     std::array<uint8_t, 1500> nucleus_buf_;
 };
