@@ -290,6 +290,6 @@ struct SpectrumDataV3 {
 struct SpectrumHeader {
     float start_frequency;
     float step_frequency;
-}
+};
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
