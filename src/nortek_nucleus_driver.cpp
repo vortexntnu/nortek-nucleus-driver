@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include "nortek_nucleus_messages.hpp"
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -52,18 +53,16 @@ T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
 
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
                                     std::size_t len) {
-    HeaderData header{};
-    std::memcpy(&header, nucleus_buf_.data(), sizeof(HeaderData));
-    std::size_t offset = sizeof(HeaderData);
+    std::size_t offset = 0;
+    HeaderData header = read_from_buffer<HeaderData>(
+        nucleus_buf_.data(), nucleus_buf_.size(), offset);
+    offset += sizeof(HeaderData);
 
     DataSeriesId data_series = static_cast<DataSeriesId>(header.data_series_id);
 
-    if (data_series != DataSeriesId::StringData ||
-        data_series != DataSeriesId::SpectrumDataV3) {
-        CommonData common_data_header = read_from_buffer<CommonData>(
-            nucleus_buf_.data(), nucleus_buf_.size(), offset);
-        offset += sizeof(CommonData);
-    }
+    CommonData common_data_header = read_from_buffer<CommonData>(
+        nucleus_buf_.data(), nucleus_buf_.size(), offset);
+    offset += sizeof(CommonData);
 
     switch (data_series) {
         case DataSeriesId::ImuData: {
@@ -84,9 +83,11 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::FastPressureData: {
+            std::size_t data_offset = common_data_header.data_offset;
+
             FastPressureData fast_pressure_data =
                 read_from_buffer<FastPressureData>(nucleus_buf_.data(),
-                                                   nucleus_buf_.size(), offset);
+                                                   nucleus_buf_.size(), data_offset);
             break;
         }
         case DataSeriesId::StringData: {
@@ -117,8 +118,10 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::InsData: {
+            std::size_t data_offset = common_data_header.data_offset;
+
             InsDataV2 ins_data = read_from_buffer<InsDataV2>(
-                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+                nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             break;
         }
         case DataSeriesId::SpectrumDataV3: {

@@ -32,7 +32,7 @@ struct HeaderData {
 
 struct CommonData {
     uint8_t version;
-    uint8_t offset_data;
+    uint8_t data_offset;
     uint8_t flags;
     uint8_t reserved[1];
 
