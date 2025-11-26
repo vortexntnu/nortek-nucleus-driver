@@ -250,7 +250,7 @@ struct CurrentProfileCorrelationData {
 
 struct SpectrumDataV3 {
     uint8_t version;
-    uint8_t offset_data;
+    uint8_t data_offset;
     uint16_t configuration;
     uint32_t serial_number;
 
@@ -285,8 +285,11 @@ struct SpectrumDataV3 {
     uint32_t extended_status;
 
     uint32_t ensamble_counter;
-
-    // TODO add spectrum frequency data
 };
+
+struct SpectrumHeader {
+    float start_frequency;
+    float step_frequency;
+}
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

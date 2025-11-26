@@ -83,18 +83,20 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::FastPressureData: {
-            std::size_t data_offset = common_data_header.data_offset;
+            const std::size_t data_offset = common_data_header.data_offset;
 
             FastPressureData fast_pressure_data =
-                read_from_buffer<FastPressureData>(nucleus_buf_.data(),
-                                                   nucleus_buf_.size(), data_offset);
+                read_from_buffer<FastPressureData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             break;
         }
         case DataSeriesId::StringData: {
-            std::size_t data_size = header.data_size;
+            const std::size_t data_size = header.data_size;
             constexpr std::size_t header_offset = sizeof(HeaderData);
             std::string payload;
-            payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()+ header_offset), data_size);
+            payload.assign(
+                reinterpret_cast<char*>(nucleus_buf_.data() + header_offset),
+                data_size);
             break;
         }
         case DataSeriesId::AltimeterData: {
@@ -122,13 +124,33 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::InsData: {
-            std::size_t data_offset = common_data_header.data_offset;
+            const std::size_t data_offset = common_data_header.data_offset;
 
             InsDataV2 ins_data = read_from_buffer<InsDataV2>(
                 nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             break;
         }
         case DataSeriesId::SpectrumDataV3: {
+            constexpr std::size_t header_offset = sizeof(HeaderData);
+            SpectrumDataV3 spectrum_data = read_from_buffer<SpectrumDataV3>(
+                nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+
+            const std::size_t data_offset = spectrum_data.data_offset;
+
+            const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
+            const uint8_t beams = spectrum_data.num_beam_bins >> 13;
+
+            SpectrumHeader spectrum_freq_header =
+                read_from_buffer<SpectrumHeader>(nucleus_buf_.data(),
+                                                 nucleus_buf_.size(),
+                                                 header_offset + data_offset);
+
+            std::vector<int16_t> spectrum_freq_data(bins * beams);
+            const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
+            std::memcpy(spectrum_freq_data.data(),
+                        nucleus_buf_.data() + header_offset + data_offset + 64,
+                        num_bytes);
+
             break;
         }
         default:
