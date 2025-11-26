@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <iterator>
 #include "nortek_nucleus_messages.hpp"
 
@@ -116,6 +117,14 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::CurrentProfileData: {
+            CurrentProfileData current_profile_data = read_from_buffer<CurrentProfileData>(nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            
+            const uint16_t num_cells = current_profile_data.num_cells;
+            const std::size_t data_offset = sizeof(HeaderData) + common_data_header.data_offset;
+
+            std::vector<CurrentProfileVelocityData> velocity_data(num_cells);
+            std::memcpy(velocity_data.data(), nucleus_buf_.data() + data_offset, num_cells * sizeof(CurrentProfileVelocityData));
+
             break;
         }
         case DataSeriesId::AhrsData: {
@@ -124,7 +133,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::InsData: {
-            const std::size_t data_offset = common_data_header.data_offset;
+            const std::size_t data_offset = sizeof(HeaderData) + common_data_header.data_offset;
 
             InsDataV2 ins_data = read_from_buffer<InsDataV2>(
                 nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
@@ -135,7 +144,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             SpectrumDataV3 spectrum_data = read_from_buffer<SpectrumDataV3>(
                 nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
 
-            const std::size_t data_offset = spectrum_data.data_offset;
+            const std::size_t data_offset = sizeof(HeaderData) + spectrum_data.data_offset;
 
             const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
             const uint8_t beams = spectrum_data.num_beam_bins >> 13;
