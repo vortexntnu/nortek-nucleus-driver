@@ -91,6 +91,10 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::StringData: {
+            std::size_t data_size = header.data_size;
+            constexpr std::size_t header_offset = sizeof(HeaderData);
+            std::string payload;
+            payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()+ header_offset), data_size);
             break;
         }
         case DataSeriesId::AltimeterData: {
