@@ -231,8 +231,20 @@ struct CurrentProfileData {
     float blanking3;
     uint16_t num_cells;
     int16_t ambiguity_velocity;
+};
 
-    // TODO add variable amount elements
+struct CurrentProfileVelocityData {
+    int16_t velocity_x;
+    int16_t velocity_y;
+    int16_t velocity_z;
+};
+
+struct CurrentProfileAmplitudeData {
+    uint8_t amplitude[3];
+};
+
+struct CurrentProfileCorrelationData {
+    uint8_t correlation[3];
 };
 
 struct SpectrumDataV3 {
