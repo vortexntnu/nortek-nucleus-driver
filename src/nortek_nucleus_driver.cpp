@@ -1,13 +1,11 @@
 
 #include "nortek_nucleus_driver.hpp"
-#include <sys/stat.h>
 #include <asio/streambuf.hpp>
 #include <asio/write.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <iterator>
 #include "nortek_nucleus_messages.hpp"
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -183,15 +181,17 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
     }
 }
 
-std::error_code NortekNucleusDriver::send_command(const std::string& cmd) {
+NucleusStatusCode NortekNucleusDriver::send_command(const std::string& cmd) {
     std::error_code error_code{};
     std::string msg = cmd + "\r\n";
     asio::write(nucleus_sock_, asio::buffer(msg), error_code);
+    if (error_code)
+        return NucleusStatusCode::SendFailed;
 
     asio::streambuf buf{};
     asio::read_until(nucleus_sock_, buf, "\r\n", error_code);
     if (error_code)
-        return error_code;
+        return NucleusStatusCode::Error;
 
     std::istream istream(&buf);
     std::string resp;
@@ -201,8 +201,21 @@ std::error_code NortekNucleusDriver::send_command(const std::string& cmd) {
         resp.pop_back();
 
     if (resp != "OK") {
-        return std::make_error_code(std::errc::protocol_error);
+        return NucleusStatusCode::ReadFailed;
     }
 
-    return {};
+    return NucleusStatusCode::Ok;
 }
+
+NucleusStatusCode NortekNucleusDriver::start_nucleus(){
+    const std::string cmd = "START";
+    return send_command(cmd);
+}
+
+NucleusStatusCode NortekNucleusDriver::stop_nucleus(){
+    const std::string cmd = "STOP";
+    return send_command(cmd);
+}
+
+
+

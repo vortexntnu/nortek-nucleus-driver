@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-
 enum class DataSeriesId : uint8_t {
 
     SpectrumDataV3 = 0x20,
@@ -19,6 +18,14 @@ enum class DataSeriesId : uint8_t {
     AhrsData = 0xD2,
     InsData = 0xDC,
 };
+
+enum class NucleusStatusCode : int {
+    Ok = 0,
+    Error = -1,
+    SendFailed = -2,
+    ReadFailed = -3,
+};
+ 
 
 struct HeaderData {
     uint8_t sync_byte;

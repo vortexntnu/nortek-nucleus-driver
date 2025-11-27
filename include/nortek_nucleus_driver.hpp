@@ -35,7 +35,10 @@ class NortekNucleusDriver {
 
     void start_read(void);
 
-    std::error_code send_command(const std::string& cmd);
+    NucleusStatusCode send_command(const std::string& cmd);
+
+    NucleusStatusCode start_nucleus();
+    NucleusStatusCode stop_nucleus();
 
    private:
     void read_data(const std::error_code& error_code, std::size_t n);
