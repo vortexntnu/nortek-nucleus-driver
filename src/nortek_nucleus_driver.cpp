@@ -10,7 +10,8 @@
 
 NortekNucleusDriver::NortekNucleusDriver(
 
-    asio::io_context& io, std::function<void(NortekNucleusFrame)> callback)
+    asio::io_context& io,
+    std::function<void(NortekNucleusFrame)> callback)
     : nucleus_sock_(io), callback_(callback) {}
 
 std::error_code NortekNucleusDriver::open_tcp_sockets(
@@ -181,17 +182,23 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
     }
 }
 
-NucleusStatusCode NortekNucleusDriver::send_command(const std::string& cmd) {
+NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
+    NucleusReply reply{};
     std::error_code error_code{};
     std::string msg = cmd + "\r\n";
     asio::write(nucleus_sock_, asio::buffer(msg), error_code);
-    if (error_code)
-        return NucleusStatusCode::SendFailed;
+    if (error_code) {
+        reply.status = NucleusStatusCode::SendFailed;
+        return reply;
+    }
 
     asio::streambuf buf{};
-    asio::read_until(nucleus_sock_, buf, "\r\n", error_code);
-    if (error_code)
-        return NucleusStatusCode::Error;
+    std::size_t len = asio::read_until(nucleus_sock_, buf, "\r\n", error_code);
+
+    if (error_code) {
+        reply.status = NucleusStatusCode::ReadFailed;
+        return reply;
+    }
 
     std::istream istream(&buf);
     std::string resp;
@@ -200,22 +207,27 @@ NucleusStatusCode NortekNucleusDriver::send_command(const std::string& cmd) {
     if (!resp.empty() && resp.back() == '\r')
         resp.pop_back();
 
-    if (resp != "OK") {
-        return NucleusStatusCode::ReadFailed;
-    }
-
-    return NucleusStatusCode::Ok;
+    reply.status = NucleusStatusCode::Ok;
+    reply.payload = resp;
+    return reply;
 }
 
-NucleusStatusCode NortekNucleusDriver::start_nucleus(){
+NucleusStatusCode NortekNucleusDriver::start_nucleus() {
     const std::string cmd = "START";
-    return send_command(cmd);
+    return send_command(cmd).status;
 }
 
-NucleusStatusCode NortekNucleusDriver::stop_nucleus(){
+NucleusStatusCode NortekNucleusDriver::stop_nucleus() {
     const std::string cmd = "STOP";
-    return send_command(cmd);
+    return send_command(cmd).status;
 }
 
+NucleusStatusCode NortekNucleusDriver::trigger_read() {
+    const std::string cmd = "TRIG";
+    return send_command(cmd).status;
+}
 
-
+NucleusStatusCode NortekNucleusDriver::get_settings(const std::string& type) {
+    std::string cmd = "GET" + type;
+    return send_command(cmd).status;
+}

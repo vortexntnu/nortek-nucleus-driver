@@ -2,6 +2,7 @@
 #define NORTEK_NUCLEUS_MESSAGES_HPP_
 
 #include <cstdint>
+#include <string>
 
 enum class DataSeriesId : uint8_t {
 
@@ -297,6 +298,11 @@ struct SpectrumDataV3 {
 struct SpectrumHeader {
     float start_frequency;
     float step_frequency;
+};
+
+struct NucleusReply {
+    NucleusStatusCode status;
+    std::string payload;
 };
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
