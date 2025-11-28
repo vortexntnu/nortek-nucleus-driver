@@ -58,7 +58,24 @@ T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
 }
 
 bool verify_checksum(const uint8_t* data, std::size_t len, uint16_t checksum) {
-    return true;
+    uint16_t true_checksum = 0xB58C;
+
+    size_t i = 0;
+    while (i < len) {
+        uint16_t u = data[i];
+
+        uint16_t v = 0x00;
+
+        if (i + 1 < len)
+            v = data[i + 1];
+
+        uint16_t word = static_cast<uint16_t>(u | (v << 8));
+
+        true_checksum = static_cast<uint16_t>((true_checksum + word) & 0xFFFF);
+
+        i += 2;
+    }
+    return true_checksum == checksum;
 }
 
 void NortekNucleusDriver::read_header(const std::error_code error_code,
@@ -82,10 +99,7 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
     start_read_body(id, header_.data_size);
 }
 
-void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {
-
-
-}
+void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {}
 
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
                                     std::size_t len) {
