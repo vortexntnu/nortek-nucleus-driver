@@ -41,6 +41,7 @@ class NortekNucleusDriver {
     NucleusStatusCode stop_nucleus();
     NucleusStatusCode trigger_read();
     NucleusStatusCode get_settings(const std::string& type);
+    NucleusReply get_error();
 
    private:
     void read_data(const std::error_code& error_code, std::size_t n);
