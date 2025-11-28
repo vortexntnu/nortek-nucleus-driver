@@ -228,6 +228,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
         default:
             break;
     }
+    start_read_header();
 }
 
 NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
