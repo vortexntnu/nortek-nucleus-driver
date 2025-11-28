@@ -33,8 +33,14 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
 void NortekNucleusDriver::start_read(void) {
     nucleus_sock_.async_receive(
         asio::buffer(nucleus_buf_),
-        std::bind(&NortekNucleusDriver::read_data, this, std::placeholders::_1,
-                  std::placeholders::_2));
+        std::bind(&NortekNucleusDriver::read_header, this,
+                  std::placeholders::_1, std::placeholders::_2));
+}
+
+void NortekNucleusDriver::start_read_header() {
+    asio::async_read(nucleus_sock_, asio::buffer(&header_, sizeof(header_)),
+                     std::bind(&NortekNucleusDriver::read_header, this,
+                               std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename T>
@@ -49,6 +55,36 @@ T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
     T value{};
     std::memcpy(&value, data + offset, sizeof(T));
     return value;
+}
+
+bool verify_checksum(const uint8_t* data, std::size_t len, uint16_t checksum) {
+    return true;
+}
+
+void NortekNucleusDriver::read_header(const std::error_code error_code,
+                                      std::size_t len) {
+    if (len < sizeof(HeaderData) || error_code) {
+        start_read_header();
+        return;
+    }
+
+    if (header_.sync_byte != 0xA5) {
+        start_read_header();
+        return;
+    }
+    if (verify_checksum(reinterpret_cast<const uint8_t*>(&header_),
+                        sizeof(HeaderData) - 1, header_.header_checksum)) {
+        start_read_header();
+        return;
+    }
+
+    DataSeriesId id = static_cast<DataSeriesId>(header_.data_series_id);
+    start_read_body(id, header_.data_size);
+}
+
+void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {
+
+
 }
 
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
@@ -232,7 +268,7 @@ NucleusStatusCode NortekNucleusDriver::get_settings(const std::string& type) {
     return send_command(cmd).status;
 }
 
-NucleusReply NortekNucleusDriver::get_error(){
+NucleusReply NortekNucleusDriver::get_error() {
     std::string cmd = "GETERROR";
     return send_command(cmd);
 }

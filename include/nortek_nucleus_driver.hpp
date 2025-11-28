@@ -3,6 +3,7 @@
 #define NORTEK_NUCLEUS_DRIVER_HPP_
 
 #include <asio.hpp>
+#include <cstddef>
 #include <functional>
 #include <variant>
 #include "nortek_nucleus_messages.hpp"
@@ -34,6 +35,8 @@ class NortekNucleusDriver {
     std::error_code open_tcp_sockets(const ConnectionParams& params);
 
     void start_read(void);
+    void start_read_header();
+    void start_read_body(DataSeriesId id, std::size_t len);
 
     NucleusReply send_command(const std::string& cmd);
 
@@ -44,11 +47,13 @@ class NortekNucleusDriver {
     NucleusReply get_error();
 
    private:
+    void read_header(const std::error_code error_code, std::size_t len);
     void read_data(const std::error_code& error_code, std::size_t n);
 
     asio::ip::tcp::socket nucleus_sock_;
     std::array<uint8_t, 1500> nucleus_buf_;
 
+    HeaderData header_{};
     std::function<void(NortekNucleusFrame)> callback_;
 };
 
