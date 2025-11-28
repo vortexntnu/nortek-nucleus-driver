@@ -99,22 +99,20 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
     start_read_body(id, header_.data_size);
 }
 
-void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {}
+void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {
+    asio::async_read(nucleus_sock_, asio::buffer(nucleus_buf_.data(), len),
+                     std::bind(&NortekNucleusDriver::read_data, this,
+                               std::placeholders::_1, std::placeholders::_2, id));
+}
 
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
-                                    std::size_t len) {
+                                    std::size_t len, const DataSeriesId id) {
     std::size_t offset = 0;
-    HeaderData header = read_from_buffer<HeaderData>(
-        nucleus_buf_.data(), nucleus_buf_.size(), offset);
-    offset += sizeof(HeaderData);
-
-    DataSeriesId data_series = static_cast<DataSeriesId>(header.data_series_id);
-
     CommonData common_data_header = read_from_buffer<CommonData>(
         nucleus_buf_.data(), nucleus_buf_.size(), offset);
     offset += sizeof(CommonData);
 
-    switch (data_series) {
+    switch (id) {
         case DataSeriesId::ImuData: {
             ImuData imu_data = read_from_buffer<ImuData>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
@@ -146,7 +144,7 @@ void NortekNucleusDriver::read_data(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::StringData: {
-            const std::size_t data_size = header.data_size;
+            const std::size_t data_size = len;
             constexpr std::size_t header_offset = sizeof(HeaderData);
             std::string payload;
             payload.assign(

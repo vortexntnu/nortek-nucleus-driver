@@ -36,7 +36,7 @@ class NortekNucleusDriver {
 
     void start_read(void);
     void start_read_header();
-    void start_read_body(DataSeriesId id, std::size_t len);
+    void start_read_body(const DataSeriesId id, std::size_t len);
 
     NucleusReply send_command(const std::string& cmd);
 
@@ -48,7 +48,7 @@ class NortekNucleusDriver {
 
    private:
     void read_header(const std::error_code error_code, std::size_t len);
-    void read_data(const std::error_code& error_code, std::size_t n);
+    void read_data(const std::error_code& error_code, std::size_t n, const DataSeriesId id);
 
     asio::ip::tcp::socket nucleus_sock_;
     std::array<uint8_t, 1500> nucleus_buf_;
