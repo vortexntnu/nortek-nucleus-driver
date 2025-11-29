@@ -318,6 +318,7 @@ enum class NucleusDataStreamSettings {
 };
 
 enum class NucleusDataFormats {
+    FastPressureFormat = 150,
     BottomTrackRDIPD6 = 156,
     AltimeterFormat = 170,
     BottomTrackBinaryFormat = 180,
@@ -339,6 +340,14 @@ struct AltimeterSettings {
     NucleusDataFormats data_format;
 
     
+};
+
+struct FastPressureSettings {
+    bool enable_fast_pressure;
+    int sampling_rate;
+    NucleusDataStreamSettings data_stream_settings;
+    NucleusDataFormats data_format;
+
 };
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

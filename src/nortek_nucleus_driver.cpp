@@ -338,10 +338,10 @@ NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
 
     switch (settings.data_format) {
         case NucleusDataFormats::BottomTrackBinaryFormat:
-            cmd += "DF=180";
+            cmd += "DF=180,";
             break;
         case NucleusDataFormats::BottomTrackRDIPD6:
-            cmd += "DF=156";
+            cmd += "DF=156,";
         default:
             break;
     }
@@ -370,7 +370,44 @@ NucleusStatusCode NortekNucleusDriver::set_altimeter_settings(
 
     switch (settings.data_format) {
         case NucleusDataFormats::AltimeterFormat:
-            cmd += "DF=180";
+            cmd += "DF=170,";
+            break;
+        default:
+            break;
+    }
+    return send_command(cmd).status;
+}
+
+NucleusStatusCode NortekNucleusDriver::set_fast_pressure_settings(
+    const FastPressureSettings& settings) {
+    std::string cmd = "SETFASTPRESSURE,";
+
+    if (settings.enable_fast_pressure) {
+        cmd += "EN=1";
+    } else {
+        cmd += "EN=0";
+    }
+
+    cmd += "SR=" + std::to_string(settings.sampling_rate) +",";
+
+    switch (settings.data_stream_settings) {
+        case NucleusDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case NucleusDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case NucleusDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case NucleusDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case NucleusDataFormats::FastPressureFormat:
+            cmd += "DF=150,";
             break;
         default:
             break;

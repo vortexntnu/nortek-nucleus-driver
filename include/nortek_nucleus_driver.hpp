@@ -49,6 +49,8 @@ class NortekNucleusDriver {
     NucleusStatusCode set_bottom_track_settings(
         const BottomTrackSettings& settings);
     NucleusStatusCode set_altimeter_settings(const AltimeterSettings& settings);
+    NucleusStatusCode set_fast_pressure_settings(
+        const FastPressureSettings& settings);
 
    private:
     void read_header(const std::error_code error_code, std::size_t len);
