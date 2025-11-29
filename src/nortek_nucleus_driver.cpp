@@ -291,17 +291,17 @@ NucleusReply NortekNucleusDriver::get_error() {
 
 NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
     const BottomTrackSettings& settings) {
-    std::string cmd = "MODE:";
+    std::string cmd = "SETBT,";
 
     switch (settings.mode) {
         case BottomTrackMode::FastACQ:
-            cmd += "\"FAST_ACQ\"";
+            cmd += "MODE=\"FAST_ACQ\"";
             break;
         case BottomTrackMode::Crawler:
-            cmd += "\"CRAWLER\"";
+            cmd += "MODE=\"CRAWLER\"";
             break;
         case BottomTrackMode::Auto:
-            cmd += "\"AUTO\"";
+            cmd += "MODE=\"AUTO\"";
             break;
     }
     cmd += ",";
@@ -322,16 +322,16 @@ NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
     }
 
     switch (settings.data_stream_settings) {
-        case BottomTrackDataStreamSettings::Off:
+        case NucleusDataStreamSettings::Off:
             cmd += "DS=\"OFF\",";
             break;
-        case BottomTrackDataStreamSettings::On:
+        case NucleusDataStreamSettings::On:
             cmd += "DS=\"ON\",";
             break;
-        case BottomTrackDataStreamSettings::Cmd:
+        case NucleusDataStreamSettings::Cmd:
             cmd += "DS=\"CMD\",";
             break;
-        case BottomTrackDataStreamSettings::Data:
+        case NucleusDataStreamSettings::Data:
             cmd += "DS=\"DATA\",";
             break;
     }
@@ -342,6 +342,36 @@ NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
             break;
         case NucleusDataFormats::BottomTrackRDIPD6:
             cmd += "DF=156";
+        default:
+            break;
+    }
+    return send_command(cmd).status;
+}
+
+NucleusStatusCode NortekNucleusDriver::set_altimeter_settings(
+    const AltimeterSettings& settings) {
+    std::string cmd = "SETALTI,";
+    cmd += "PL=" + std::to_string(settings.power_level) + ",";
+
+    switch (settings.data_stream_settings) {
+        case NucleusDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case NucleusDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case NucleusDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case NucleusDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case NucleusDataFormats::AltimeterFormat:
+            cmd += "DF=180";
+            break;
         default:
             break;
     }

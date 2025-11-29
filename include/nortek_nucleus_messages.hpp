@@ -310,7 +310,7 @@ enum class BottomTrackMode {
     Auto,
 };
 
-enum class BottomTrackDataStreamSettings {
+enum class NucleusDataStreamSettings {
     Off,
     On,
     Cmd,
@@ -319,6 +319,7 @@ enum class BottomTrackDataStreamSettings {
 
 enum class NucleusDataFormats {
     BottomTrackRDIPD6 = 156,
+    AltimeterFormat = 170,
     BottomTrackBinaryFormat = 180,
 };
 
@@ -326,10 +327,18 @@ struct BottomTrackSettings {
     BottomTrackMode mode;
     int velocity_range;
     bool enable_watertrack;
-    uint8_t power_level;
+    int power_level;
     bool power_level_user_defined;
-    BottomTrackDataStreamSettings data_stream_settings;
+    NucleusDataStreamSettings data_stream_settings;
     NucleusDataFormats data_format;
+};
+
+struct AltimeterSettings {
+    int power_level;
+    NucleusDataStreamSettings data_stream_settings;
+    NucleusDataFormats data_format;
+
+    
 };
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
