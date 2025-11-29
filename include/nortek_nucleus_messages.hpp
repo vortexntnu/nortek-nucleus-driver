@@ -26,7 +26,6 @@ enum class NucleusStatusCode : int {
     SendFailed = -2,
     ReadFailed = -3,
 };
- 
 
 struct HeaderData {
     uint8_t sync_byte;
@@ -303,6 +302,34 @@ struct SpectrumHeader {
 struct NucleusReply {
     NucleusStatusCode status;
     std::string payload;
+};
+
+enum class BottomTrackMode {
+    FastACQ = 0,
+    Crawler,
+    Auto,
+};
+
+enum class BottomTrackDataStreamSettings {
+    Off,
+    On,
+    Cmd,
+    Data,
+};
+
+enum class NucleusDataFormats {
+    BottomTrackRDIPD6 = 156,
+    BottomTrackBinaryFormat = 180,
+};
+
+struct BottomTrackSettings {
+    BottomTrackMode mode;
+    int velocity_range;
+    bool enable_watertrack;
+    uint8_t power_level;
+    bool power_level_user_defined;
+    BottomTrackDataStreamSettings data_stream_settings;
+    NucleusDataFormats data_format;
 };
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

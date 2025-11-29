@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <string>
 #include "nortek_nucleus_messages.hpp"
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -100,13 +101,15 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
 }
 
 void NortekNucleusDriver::start_read_body(DataSeriesId id, std::size_t len) {
-    asio::async_read(nucleus_sock_, asio::buffer(nucleus_buf_.data(), len),
-                     std::bind(&NortekNucleusDriver::read_data, this,
-                               std::placeholders::_1, std::placeholders::_2, id));
+    asio::async_read(
+        nucleus_sock_, asio::buffer(nucleus_buf_.data(), len),
+        std::bind(&NortekNucleusDriver::read_data, this, std::placeholders::_1,
+                  std::placeholders::_2, id));
 }
 
 void NortekNucleusDriver::read_data(const std::error_code& error_code,
-                                    std::size_t len, const DataSeriesId id) {
+                                    std::size_t len,
+                                    const DataSeriesId id) {
     std::size_t offset = 0;
     CommonData common_data_header = read_from_buffer<CommonData>(
         nucleus_buf_.data(), nucleus_buf_.size(), offset);
@@ -284,4 +287,63 @@ NucleusStatusCode NortekNucleusDriver::get_settings(const std::string& type) {
 NucleusReply NortekNucleusDriver::get_error() {
     std::string cmd = "GETERROR";
     return send_command(cmd);
+}
+
+NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
+    const BottomTrackSettings& settings) {
+    std::string cmd = "MODE:";
+
+    switch (settings.mode) {
+        case BottomTrackMode::FastACQ:
+            cmd += "\"FAST_ACQ\"";
+            break;
+        case BottomTrackMode::Crawler:
+            cmd += "\"CRAWLER\"";
+            break;
+        case BottomTrackMode::Auto:
+            cmd += "\"AUTO\"";
+            break;
+    }
+    cmd += ",";
+
+    cmd += "VR=" + std::to_string(settings.velocity_range) + ",";
+
+    if (settings.enable_watertrack) {
+        cmd += "WT=\"ON\",";
+    } else {
+        cmd += "WT=\"OFF\",";
+    }
+
+    if (settings.power_level_user_defined) {
+        cmd += "PLMODE=\"USER\",";
+        cmd += "PL=" + std::to_string(settings.power_level) + ",";
+    } else {
+        cmd += "PLMODE=\"MAX\",";
+    }
+
+    switch (settings.data_stream_settings) {
+        case BottomTrackDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case BottomTrackDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case BottomTrackDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case BottomTrackDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case NucleusDataFormats::BottomTrackBinaryFormat:
+            cmd += "DF=180";
+            break;
+        case NucleusDataFormats::BottomTrackRDIPD6:
+            cmd += "DF=156";
+        default:
+            break;
+    }
+    return send_command(cmd).status;
 }

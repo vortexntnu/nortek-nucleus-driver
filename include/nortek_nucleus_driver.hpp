@@ -46,9 +46,14 @@ class NortekNucleusDriver {
     NucleusStatusCode get_settings(const std::string& type);
     NucleusReply get_error();
 
+    NucleusStatusCode set_bottom_track_settings(
+        const BottomTrackSettings& settings);
+
    private:
     void read_header(const std::error_code error_code, std::size_t len);
-    void read_data(const std::error_code& error_code, std::size_t n, const DataSeriesId id);
+    void read_data(const std::error_code& error_code,
+                   std::size_t n,
+                   const DataSeriesId id);
 
     asio::ip::tcp::socket nucleus_sock_;
     std::array<uint8_t, 1500> nucleus_buf_;
