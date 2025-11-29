@@ -388,7 +388,7 @@ NucleusStatusCode NortekNucleusDriver::set_fast_pressure_settings(
         cmd += "EN=0";
     }
 
-    cmd += "SR=" + std::to_string(settings.sampling_rate) +",";
+    cmd += "SR=" + std::to_string(settings.sampling_rate) + ",";
 
     switch (settings.data_stream_settings) {
         case NucleusDataStreamSettings::Off:
@@ -408,6 +408,51 @@ NucleusStatusCode NortekNucleusDriver::set_fast_pressure_settings(
     switch (settings.data_format) {
         case NucleusDataFormats::FastPressureFormat:
             cmd += "DF=150,";
+            break;
+        default:
+            break;
+    }
+    return send_command(cmd).status;
+}
+
+NucleusStatusCode NortekNucleusDriver::set_magnetometer_settings(
+    const MagnetometerSettings& settings) {
+    std::string cmd = "SETMAG,";
+
+    cmd += "FREQ=" + std::to_string(settings.freq) + ",";
+
+    switch (settings.mode) {
+        case MagnetometerMethod::Off:
+            cmd += "METHOD=\"OFF\",";
+            break;
+        case MagnetometerMethod::Auto:
+            cmd += "METHOD=\"AUTO\",";
+            break;
+        case MagnetometerMethod::Wmm:
+            cmd += "METHOD=\"WMM\",";
+            break;
+        default:
+            break;
+    }
+
+    switch (settings.data_stream_settings) {
+        case NucleusDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case NucleusDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case NucleusDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case NucleusDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case DataSeriesId::MagnometerData:
+            cmd += "DF=135,";
             break;
         default:
             break;

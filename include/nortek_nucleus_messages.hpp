@@ -350,4 +350,17 @@ struct FastPressureSettings {
 
 };
 
+enum class MagnetometerMethod {
+    Auto,
+    Off,
+    Wmm,
+};
+
+struct MagnetometerSettings {
+    int freq;
+    MagnetometerMethod mode;
+    NucleusDataStreamSettings data_stream_settings;
+    DataSeriesId data_format;
+};
+
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
