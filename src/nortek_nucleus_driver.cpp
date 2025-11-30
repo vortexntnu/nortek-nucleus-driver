@@ -481,3 +481,30 @@ NucleusStatusCode NortekNucleusDriver::set_ethernet_settings(
 
     return send_command(cmd).status;
 }
+
+NucleusStatusCode NortekNucleusDriver::save_settings(
+    const SaveSettings settings) {
+    std::string cmd = "SAVE,";
+
+    switch (settings) {
+        case SaveSettings::All:
+            cmd += "ALL";
+            break;
+        case SaveSettings::Config:
+            cmd += "CONFIG";
+            break;
+        case SaveSettings::Comm:
+            cmd += "COMM";
+            break;
+        case SaveSettings::Mission:
+            cmd += "MISSION";
+            break;
+        case SaveSettings::Magcal:
+            cmd += "MAGCAL";
+            break;
+        default:
+            break;
+    }
+
+    return send_command(cmd).status;
+}

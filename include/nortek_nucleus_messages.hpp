@@ -369,4 +369,12 @@ struct EthernetSettings {
     std::string password;
 };
 
+enum class SaveSettings {
+    All,
+    Config,
+    Comm,
+    Mission,
+    Magcal,
+};
+
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
