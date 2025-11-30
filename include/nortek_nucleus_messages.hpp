@@ -377,4 +377,17 @@ enum class SaveSettings {
     Magcal,
 };
 
+enum class AhrsMode {
+    FixedHardAndSoftIron,
+    HardIronEstimation,
+    HardAndSoftEstimation,
+};
+
+struct AhrsSettings {
+    int freq;
+    AhrsMode mode;
+    NucleusDataStreamSettings data_stream_settings;
+    DataSeriesId data_format;
+};
+
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

@@ -55,6 +55,7 @@ class NortekNucleusDriver {
         const MagnetometerSettings& settings);
     NucleusStatusCode set_ethernet_settings(const EthernetSettings& settings);
     NucleusStatusCode save_settings(const SaveSettings settings);
+    NucleusStatusCode set_ahrs_settings(const AhrsSettings& settings);
 
    private:
     void read_header(const std::error_code error_code, std::size_t len);

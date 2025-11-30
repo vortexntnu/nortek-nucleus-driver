@@ -1,4 +1,3 @@
-
 #include "nortek_nucleus_driver.hpp"
 #include <asio/streambuf.hpp>
 #include <asio/write.hpp>
@@ -506,5 +505,51 @@ NucleusStatusCode NortekNucleusDriver::save_settings(
             break;
     }
 
+    return send_command(cmd).status;
+}
+
+NucleusStatusCode NortekNucleusDriver::set_ahrs_settings(
+    const AhrsSettings& settings) {
+    std::string cmd = "SETAHRS,";
+
+    cmd += "FREQ=" + std::to_string(settings.freq) + ",";
+
+
+    switch (settings.mode) {
+        case AhrsMode::FixedHardAndSoftIron:
+            cmd += "METHOD=0,";
+            break;
+        case AhrsMode::HardIronEstimation:
+            cmd += "METHOD=1,";
+            break;
+        case AhrsMode::HardAndSoftEstimation:
+            cmd += "METHOD=2,";
+            break;
+        default:
+            break;
+    }
+
+    switch (settings.data_stream_settings) {
+        case NucleusDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case NucleusDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case NucleusDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case NucleusDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case DataSeriesId::AhrsData:
+            cmd += "DF=210,";
+            break;
+        default:
+            break;
+    }
     return send_command(cmd).status;
 }
