@@ -338,8 +338,6 @@ struct AltimeterSettings {
     int power_level;
     NucleusDataStreamSettings data_stream_settings;
     NucleusDataFormats data_format;
-
-    
 };
 
 struct FastPressureSettings {
@@ -347,7 +345,6 @@ struct FastPressureSettings {
     int sampling_rate;
     NucleusDataStreamSettings data_stream_settings;
     NucleusDataFormats data_format;
-
 };
 
 enum class MagnetometerMethod {
@@ -361,6 +358,15 @@ struct MagnetometerSettings {
     MagnetometerMethod mode;
     NucleusDataStreamSettings data_stream_settings;
     DataSeriesId data_format;
+};
+
+struct EthernetSettings {
+    bool use_static_ip;
+    std::string ip;
+    std::string netmask;
+    std::string default_gateway;
+    bool use_password;
+    std::string password;
 };
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

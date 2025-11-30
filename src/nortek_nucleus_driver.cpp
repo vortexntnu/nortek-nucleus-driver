@@ -459,3 +459,25 @@ NucleusStatusCode NortekNucleusDriver::set_magnetometer_settings(
     }
     return send_command(cmd).status;
 }
+
+NucleusStatusCode NortekNucleusDriver::set_ethernet_settings(
+    const EthernetSettings& settings) {
+    std::string cmd = "SETETH,";
+
+    if (settings.use_static_ip) {
+        cmd += "IPMETHOD=\"STATIC\",";
+        cmd += "IP=\"" + settings.ip + "\",";
+        cmd += "NETMASK=\"" + settings.netmask + "\",";
+        cmd += "GATEWAY=\"" + settings.default_gateway + "\",";
+    } else {
+        cmd += "IPMETHOD=\"DHCP\",";
+    }
+
+    if (settings.use_password) {
+        cmd += "PASSWORD=\"" + settings.password + "\",";
+    } else {
+        cmd += "PASSWORD=\"\"";
+    }
+
+    return send_command(cmd).status;
+}
