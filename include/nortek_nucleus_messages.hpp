@@ -256,6 +256,13 @@ struct CurrentProfileCorrelationData {
     uint8_t correlation[3];
 };
 
+struct CurrentProfileDatagram {
+    CurrentProfileData current_profle;
+    std::vector<CurrentProfileVelocityData> velocity_data;
+    std::vector<CurrentProfileAmplitudeData> amplitude_data;
+    std::vector<CurrentProfileCorrelationData> correlation_data;
+};
+
 struct SpectrumDataV3 {
     uint8_t version;
     uint8_t data_offset;

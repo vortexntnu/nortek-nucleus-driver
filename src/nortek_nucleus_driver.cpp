@@ -48,6 +48,24 @@ SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
     return spectrum_datagram;
 }
 
+CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
+                                                  std::size_t len,
+                                                  std::size_t data_offset) {
+    CurrentProfileData current_profile_data =
+        nortek_nucleus_parser::read_from_buffer<CurrentProfileData>(
+            data, len, sizeof(CommonData));
+
+    const uint16_t num_cells = current_profile_data.num_cells;
+
+    std::vector<CurrentProfileVelocityData> velocity_data(num_cells);
+    std::memcpy(velocity_data.data(), data + data_offset,
+                num_cells * sizeof(CurrentProfileVelocityData));
+    CurrentProfileDatagram datagram{};
+    datagram.current_profle = current_profile_data;
+    datagram.velocity_data = velocity_data;
+    return datagram;
+}
+
 };  // namespace nortek_nucleus_parser
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -142,11 +160,10 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
         start_read_header();
         return;
     }
-    std::size_t offset = 0;
     CommonData common_data_header =
         nortek_nucleus_parser::read_from_buffer<CommonData>(
-            nucleus_buf_.data(), nucleus_buf_.size(), offset);
-    offset += sizeof(CommonData);
+            nucleus_buf_.data(), nucleus_buf_.size(), 0);
+    std::size_t offset = sizeof(CommonData);
 
     const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
 
@@ -172,8 +189,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::FastPressureData: {
-            const std::size_t data_offset =
-                sizeof(HeaderData) + common_data_header.data_offset;
+            const std::size_t data_offset = common_data_header.data_offset;
 
             FastPressureData fast_pressure_data =
                 nortek_nucleus_parser::read_from_buffer<FastPressureData>(
@@ -183,11 +199,9 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
         }
         case DataSeriesId::StringData: {
             const std::size_t data_size = len;
-            constexpr std::size_t header_offset = sizeof(HeaderData);
             std::string payload;
-            payload.assign(
-                reinterpret_cast<char*>(nucleus_buf_.data() + header_offset),
-                data_size);
+            payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()),
+                           data_size);
             callback_(payload);
             break;
         }
@@ -213,18 +227,11 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::CurrentProfileData: {
-            CurrentProfileData current_profile_data =
-                nortek_nucleus_parser::read_from_buffer<CurrentProfileData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
-
-            const uint16_t num_cells = current_profile_data.num_cells;
-            const std::size_t data_offset =
-                sizeof(HeaderData) + common_data_header.data_offset;
-
-            std::vector<CurrentProfileVelocityData> velocity_data(num_cells);
-            std::memcpy(velocity_data.data(), nucleus_buf_.data() + data_offset,
-                        num_cells * sizeof(CurrentProfileVelocityData));
-
+            CurrentProfileDatagram datagram =
+                nortek_nucleus_parser::parse_current_profile_data(
+                    nucleus_buf_.data(), nucleus_buf_.size(),
+                    common_data_header.data_offset);
+            callback_(datagram);
             break;
         }
         case DataSeriesId::AhrsData: {
@@ -235,8 +242,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::InsData: {
-            const std::size_t data_offset =
-                sizeof(HeaderData) + common_data_header.data_offset;
+            const std::size_t data_offset = common_data_header.data_offset;
 
             InsDataV2 ins_data =
                 nortek_nucleus_parser::read_from_buffer<InsDataV2>(
