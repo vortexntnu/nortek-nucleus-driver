@@ -24,7 +24,7 @@ using NortekNucleusFrame = std::variant<ImuData,
                                         AltimeterData,
                                         AhrsDataV2,
                                         InsDataV2,
-                                        SpectrumDataV3,
+                                        SpectrumDatagram,
                                         std::string>;
 
 class NortekNucleusDriver {

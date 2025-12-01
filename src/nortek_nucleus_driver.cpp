@@ -8,15 +8,47 @@
 #include <string>
 #include "nortek_nucleus_messages.hpp"
 
-
-
 namespace nortek_nucleus_parser {
 
+template <typename T>
+T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "read_from_buffer requires trivially copyable types");
 
+    if (offset + sizeof(T) > len) {
+        return {};
+    }
 
+    T value{};
+    std::memcpy(&value, data + offset, sizeof(T));
+    return value;
+}
 
+SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
+    SpectrumDataV3 spectrum_data =
+        read_from_buffer<SpectrumDataV3>(data, len, 0);
 
-};
+    const std::size_t data_offset = spectrum_data.data_offset;
+
+    const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
+    const uint8_t beams = spectrum_data.num_beam_bins >> 13;
+
+    SpectrumFrequencyHeader spectrum_freq_header =
+        read_from_buffer<SpectrumFrequencyHeader>(data, len, data_offset);
+
+    std::vector<int16_t> spectrum_freq_data(bins * beams);
+    const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
+    std::memcpy(spectrum_freq_data.data(), data + data_offset + 64, num_bytes);
+
+    SpectrumDatagram spectrum_datagram{};
+    spectrum_datagram.spectrum = spectrum_data;
+    spectrum_datagram.freq_header = spectrum_freq_header;
+    spectrum_datagram.freq_data = spectrum_freq_data;
+
+    return spectrum_datagram;
+}
+
+};  // namespace nortek_nucleus_parser
 
 NortekNucleusDriver::NortekNucleusDriver(
 
@@ -51,20 +83,6 @@ void NortekNucleusDriver::start_read_header() {
     asio::async_read(nucleus_sock_, asio::buffer(&header_, sizeof(header_)),
                      std::bind(&NortekNucleusDriver::read_header, this,
                                std::placeholders::_1, std::placeholders::_2));
-}
-
-template <typename T>
-T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "read_from_buffer requires trivially copyable types");
-
-    if (offset + sizeof(T) > len) {
-        return {};
-    }
-
-    T value{};
-    std::memcpy(&value, data + offset, sizeof(T));
-    return value;
 }
 
 bool verify_checksum(const uint8_t* data, std::size_t len, uint16_t checksum) {
@@ -109,7 +127,8 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
     start_read_body(header_, header_.data_size);
 }
 
-void NortekNucleusDriver::start_read_body(const HeaderData header, std::size_t len) {
+void NortekNucleusDriver::start_read_body(const HeaderData header,
+                                          std::size_t len) {
     asio::async_read(
         nucleus_sock_, asio::buffer(nucleus_buf_.data(), len),
         std::bind(&NortekNucleusDriver::read_body, this, std::placeholders::_1,
@@ -119,36 +138,35 @@ void NortekNucleusDriver::start_read_body(const HeaderData header, std::size_t l
 void NortekNucleusDriver::read_body(const std::error_code& error_code,
                                     std::size_t len,
                                     const HeaderData header) {
-
-    if (verify_checksum(nucleus_buf_.data(), len, header.data_checksum)){
+    if (verify_checksum(nucleus_buf_.data(), len, header.data_checksum)) {
         start_read_header();
         return;
     }
     std::size_t offset = 0;
-    CommonData common_data_header = read_from_buffer<CommonData>(
-        nucleus_buf_.data(), nucleus_buf_.size(), offset);
+    CommonData common_data_header =
+        nortek_nucleus_parser::read_from_buffer<CommonData>(
+            nucleus_buf_.data(), nucleus_buf_.size(), offset);
     offset += sizeof(CommonData);
-
 
     const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
 
     switch (id) {
         case DataSeriesId::ImuData: {
-            ImuData imu_data = read_from_buffer<ImuData>(
+            ImuData imu_data = nortek_nucleus_parser::read_from_buffer<ImuData>(
                 nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(imu_data);
             break;
         }
         case DataSeriesId::MagnometerData: {
             MagnetoMeterData magnometer_data =
-                read_from_buffer<MagnetoMeterData>(nucleus_buf_.data(),
-                                                   nucleus_buf_.size(), offset);
+                nortek_nucleus_parser::read_from_buffer<MagnetoMeterData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(magnometer_data);
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
             FieldCalibrationData field_calibration_data =
-                read_from_buffer<FieldCalibrationData>(
+                nortek_nucleus_parser::read_from_buffer<FieldCalibrationData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(field_calibration_data);
             break;
@@ -158,7 +176,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
                 sizeof(HeaderData) + common_data_header.data_offset;
 
             FastPressureData fast_pressure_data =
-                read_from_buffer<FastPressureData>(
+                nortek_nucleus_parser::read_from_buffer<FastPressureData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             callback_(fast_pressure_data);
             break;
@@ -174,27 +192,29 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::AltimeterData: {
-            AltimeterData altimeter_data = read_from_buffer<AltimeterData>(
-                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            AltimeterData altimeter_data =
+                nortek_nucleus_parser::read_from_buffer<AltimeterData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(altimeter_data);
             break;
         }
         case DataSeriesId::BottomTrackData: {
             BottomTrackData bottom_track_data =
-                read_from_buffer<BottomTrackData>(nucleus_buf_.data(),
-                                                  nucleus_buf_.size(), offset);
+                nortek_nucleus_parser::read_from_buffer<BottomTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(bottom_track_data);
             break;
         }
         case DataSeriesId::WaterTrackData: {
-            WaterTrackData water_track_data = read_from_buffer<WaterTrackData>(
-                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            WaterTrackData water_track_data =
+                nortek_nucleus_parser::read_from_buffer<WaterTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(water_track_data);
             break;
         }
         case DataSeriesId::CurrentProfileData: {
             CurrentProfileData current_profile_data =
-                read_from_buffer<CurrentProfileData>(
+                nortek_nucleus_parser::read_from_buffer<CurrentProfileData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), offset);
 
             const uint16_t num_cells = current_profile_data.num_cells;
@@ -208,8 +228,9 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             break;
         }
         case DataSeriesId::AhrsData: {
-            AhrsDataV2 ahrs_data = read_from_buffer<AhrsDataV2>(
-                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+            AhrsDataV2 ahrs_data =
+                nortek_nucleus_parser::read_from_buffer<AhrsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
             callback_(ahrs_data);
             break;
         }
@@ -217,32 +238,16 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             const std::size_t data_offset =
                 sizeof(HeaderData) + common_data_header.data_offset;
 
-            InsDataV2 ins_data = read_from_buffer<InsDataV2>(
-                nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            InsDataV2 ins_data =
+                nortek_nucleus_parser::read_from_buffer<InsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             break;
         }
         case DataSeriesId::SpectrumDataV3: {
-            constexpr std::size_t header_offset = sizeof(HeaderData);
-            SpectrumDataV3 spectrum_data = read_from_buffer<SpectrumDataV3>(
-                nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-
-            const std::size_t data_offset =
-                sizeof(HeaderData) + spectrum_data.data_offset;
-
-            const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
-            const uint8_t beams = spectrum_data.num_beam_bins >> 13;
-
-            SpectrumHeader spectrum_freq_header =
-                read_from_buffer<SpectrumHeader>(nucleus_buf_.data(),
-                                                 nucleus_buf_.size(),
-                                                 header_offset + data_offset);
-
-            std::vector<int16_t> spectrum_freq_data(bins * beams);
-            const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
-            std::memcpy(spectrum_freq_data.data(),
-                        nucleus_buf_.data() + header_offset + data_offset + 64,
-                        num_bytes);
-
+            SpectrumDatagram spectrum_datagram =
+                nortek_nucleus_parser::parse_spectrum_data(nucleus_buf_.data(),
+                                                           nucleus_buf_.size());
+            callback_(spectrum_datagram);
             break;
         }
         default:
@@ -531,7 +536,6 @@ NucleusStatusCode NortekNucleusDriver::set_ahrs_settings(
     std::string cmd = "SETAHRS,";
 
     cmd += "FREQ=" + std::to_string(settings.freq) + ",";
-
 
     switch (settings.mode) {
         case AhrsMode::FixedHardAndSoftIron:
