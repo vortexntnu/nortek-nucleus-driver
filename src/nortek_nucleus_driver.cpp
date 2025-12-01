@@ -60,9 +60,22 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
     std::vector<CurrentProfileVelocityData> velocity_data(num_cells);
     std::memcpy(velocity_data.data(), data + data_offset,
                 num_cells * sizeof(CurrentProfileVelocityData));
+    data_offset += num_cells * sizeof(CurrentProfileVelocityData);
+
+    std::vector<CurrentProfileAmplitudeData> amplitude_data(num_cells);
+    std::memcpy(amplitude_data.data(), data + data_offset,
+                num_cells * sizeof(CurrentProfileAmplitudeData));
+    data_offset += num_cells * sizeof(CurrentProfileAmplitudeData);
+    
+    std::vector<CurrentProfileCorrelationData> correlation_data(num_cells);
+    std::memcpy(correlation_data.data(), data + data_offset,
+                num_cells * sizeof(CurrentProfileCorrelationData));
+
     CurrentProfileDatagram datagram{};
     datagram.current_profle = current_profile_data;
     datagram.velocity_data = velocity_data;
+    datagram.amplitude_data = amplitude_data;
+    datagram.correlation_data = correlation_data;
     return datagram;
 }
 
