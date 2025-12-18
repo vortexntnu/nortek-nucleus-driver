@@ -66,7 +66,7 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
     std::memcpy(amplitude_data.data(), data + data_offset,
                 num_cells * sizeof(CurrentProfileAmplitudeData));
     data_offset += num_cells * sizeof(CurrentProfileAmplitudeData);
-    
+
     std::vector<CurrentProfileCorrelationData> correlation_data(num_cells);
     std::memcpy(correlation_data.data(), data + data_offset,
                 num_cells * sizeof(CurrentProfileCorrelationData));
@@ -176,38 +176,86 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
     CommonData common_data_header =
         nortek_nucleus_parser::read_from_buffer<CommonData>(
             nucleus_buf_.data(), nucleus_buf_.size(), 0);
-    std::size_t offset = sizeof(CommonData);
+    const std::size_t header_offset = sizeof(CommonData);
+    const std::size_t data_offset = common_data_header.data_offset;
 
     const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
 
     switch (id) {
         case DataSeriesId::ImuData: {
             ImuData imu_data = nortek_nucleus_parser::read_from_buffer<ImuData>(
-                nucleus_buf_.data(), nucleus_buf_.size(), offset);
+                nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
             callback_(imu_data);
             break;
         }
         case DataSeriesId::MagnometerData: {
             MagnetoMeterData magnometer_data =
                 nortek_nucleus_parser::read_from_buffer<MagnetoMeterData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
             callback_(magnometer_data);
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
             FieldCalibrationData field_calibration_data =
                 nortek_nucleus_parser::read_from_buffer<FieldCalibrationData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
             callback_(field_calibration_data);
             break;
         }
         case DataSeriesId::FastPressureData: {
-            const std::size_t data_offset = common_data_header.data_offset;
-
             FastPressureData fast_pressure_data =
                 nortek_nucleus_parser::read_from_buffer<FastPressureData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
             callback_(fast_pressure_data);
+            break;
+        }
+        case DataSeriesId::AltimeterData: {
+            AltimeterData altimeter_data =
+                nortek_nucleus_parser::read_from_buffer<AltimeterData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            callback_(altimeter_data);
+            break;
+        }
+        case DataSeriesId::BottomTrackData: {
+            BottomTrackData bottom_track_data =
+                nortek_nucleus_parser::read_from_buffer<BottomTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            callback_(bottom_track_data);
+            break;
+        }
+        case DataSeriesId::WaterTrackData: {
+            WaterTrackData water_track_data =
+                nortek_nucleus_parser::read_from_buffer<WaterTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            callback_(water_track_data);
+            break;
+        }
+        case DataSeriesId::CurrentProfileData: {
+            CurrentProfileDatagram datagram =
+                nortek_nucleus_parser::parse_current_profile_data(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            callback_(datagram);
+            break;
+        }
+        case DataSeriesId::SpectrumDataV3: {
+            SpectrumDatagram spectrum_datagram =
+                nortek_nucleus_parser::parse_spectrum_data(nucleus_buf_.data(),
+                                                           nucleus_buf_.size());
+            callback_(spectrum_datagram);
+            break;
+        }
+        case DataSeriesId::AhrsData: {
+            AhrsDataV2 ahrs_data =
+                nortek_nucleus_parser::read_from_buffer<AhrsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            callback_(ahrs_data);
+            break;
+        }
+        case DataSeriesId::InsData: {
+            InsDataV2 ins_data =
+                nortek_nucleus_parser::read_from_buffer<InsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            // TODO add calback
             break;
         }
         case DataSeriesId::StringData: {
@@ -216,57 +264,6 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()),
                            data_size);
             callback_(payload);
-            break;
-        }
-        case DataSeriesId::AltimeterData: {
-            AltimeterData altimeter_data =
-                nortek_nucleus_parser::read_from_buffer<AltimeterData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
-            callback_(altimeter_data);
-            break;
-        }
-        case DataSeriesId::BottomTrackData: {
-            BottomTrackData bottom_track_data =
-                nortek_nucleus_parser::read_from_buffer<BottomTrackData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
-            callback_(bottom_track_data);
-            break;
-        }
-        case DataSeriesId::WaterTrackData: {
-            WaterTrackData water_track_data =
-                nortek_nucleus_parser::read_from_buffer<WaterTrackData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
-            callback_(water_track_data);
-            break;
-        }
-        case DataSeriesId::CurrentProfileData: {
-            CurrentProfileDatagram datagram =
-                nortek_nucleus_parser::parse_current_profile_data(
-                    nucleus_buf_.data(), nucleus_buf_.size(),
-                    common_data_header.data_offset);
-            callback_(datagram);
-            break;
-        }
-        case DataSeriesId::AhrsData: {
-            AhrsDataV2 ahrs_data =
-                nortek_nucleus_parser::read_from_buffer<AhrsDataV2>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), offset);
-            callback_(ahrs_data);
-            break;
-        }
-        case DataSeriesId::InsData: {
-            const std::size_t data_offset = common_data_header.data_offset;
-
-            InsDataV2 ins_data =
-                nortek_nucleus_parser::read_from_buffer<InsDataV2>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
-            break;
-        }
-        case DataSeriesId::SpectrumDataV3: {
-            SpectrumDatagram spectrum_datagram =
-                nortek_nucleus_parser::parse_spectrum_data(nucleus_buf_.data(),
-                                                           nucleus_buf_.size());
-            callback_(spectrum_datagram);
             break;
         }
         default:
