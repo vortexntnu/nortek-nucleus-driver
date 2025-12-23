@@ -79,6 +79,21 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
     return datagram;
 }
 
+uint16_t calculate_checksum(const uint8_t *packet, size_t len) {
+    uint16_t sum = 0xB58C;
+
+    for (size_t i = 0; i < len; i += 2) {
+        sum += (uint16_t) (packet[i] | (packet[i + 1] << 8));
+    }
+
+    if (len & 1) {
+        sum += (uint16_t) (packet[len - 1] << 8);
+    }
+
+    return sum;
+}
+
+
 };  // namespace nortek_nucleus_parser
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -116,26 +131,7 @@ void NortekNucleusDriver::start_read_header() {
                                std::placeholders::_1, std::placeholders::_2));
 }
 
-bool verify_checksum(const uint8_t* data, std::size_t len, uint16_t checksum) {
-    uint16_t true_checksum = 0xB58C;
 
-    size_t i = 0;
-    while (i < len) {
-        uint16_t u = data[i];
-
-        uint16_t v = 0x00;
-
-        if (i + 1 < len)
-            v = data[i + 1];
-
-        uint16_t word = static_cast<uint16_t>(u | (v << 8));
-
-        true_checksum = static_cast<uint16_t>((true_checksum + word) & 0xFFFF);
-
-        i += 2;
-    }
-    return true_checksum == checksum;
-}
 
 void NortekNucleusDriver::read_header(const std::error_code error_code,
                                       std::size_t len) {
@@ -148,8 +144,10 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
         start_read_header();
         return;
     }
-    if (verify_checksum(reinterpret_cast<const uint8_t*>(&header_),
-                        sizeof(HeaderData) - 1, header_.header_checksum)) {
+    uint16_t actual_checksum = nortek_nucleus_parser::calculate_checksum(reinterpret_cast<const uint8_t*>(&header_),
+                        sizeof(HeaderData) - 1);
+
+    if (actual_checksum != header_.header_checksum){
         start_read_header();
         return;
     }
@@ -169,7 +167,8 @@ void NortekNucleusDriver::start_read_body(const HeaderData header,
 void NortekNucleusDriver::read_body(const std::error_code& error_code,
                                     std::size_t len,
                                     const HeaderData header) {
-    if (verify_checksum(nucleus_buf_.data(), len, header.data_checksum)) {
+    uint16_t checksum = nortek_nucleus_parser::calculate_checksum(nucleus_buf_.data(), len);
+    if (checksum != header.data_checksum) {
         start_read_header();
         return;
     }
