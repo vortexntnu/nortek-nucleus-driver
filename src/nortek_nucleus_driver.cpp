@@ -254,7 +254,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             InsDataV2 ins_data =
                 nortek_nucleus_parser::read_from_buffer<InsDataV2>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
-            // TODO add calback
+            callback_(ins_data);
             break;
         }
         case DataSeriesId::StringData: {
