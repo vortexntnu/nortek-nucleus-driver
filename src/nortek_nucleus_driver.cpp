@@ -175,13 +175,11 @@ void NortekNucleusDriver::find_sync_byte(StreamState& st,
 }
 
 void NortekNucleusDriver::parse_available(StreamState& st) {
-    constexpr size_t MAX_FRAME = 1024 * 1024;  // pick a realistic upper bound
+    constexpr size_t MAX_FRAME = 1500;  // placeholder for now
     constexpr uint8_t SYNC_BYTE = 0xA5;
 
     auto it = std::find(st.buf.begin(), st.buf.end(), SYNC_BYTE);
 
-
-    
     // if (it == st.buf.end()) {
     //     if (st.buf.size() > PREAMBLE_KEEP) {
     //         st.buf.erase(st.buf.begin(), st.buf.end() - PREAMBLE_KEEP);
@@ -199,8 +197,8 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         return;
     }
 
-    HeaderData header = nortek::parser::parse_header(st.buf.data(), st.buf.size());
-
+    HeaderData header =
+        nortek::parser::parse_header(st.buf.data(), st.buf.size());
 
     if (header.data_size > MAX_FRAME) {
         st.buf.erase(st.buf.begin());
@@ -212,6 +210,125 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
 
     const uint8_t* data = st.buf.data() + sizeof(HeaderData);
     const size_t data_size = header.data_size;
+
+    std::optional<CommonData> common_data_header =
+        nortek::parser::read_from_buffer<CommonData>(data,
+                                                     data_size, 0);
+
+    if (common_data_header.has_value()) {
+        return;
+    }
+
+    const std::size_t header_offset = sizeof(CommonData);
+    const std::size_t data_offset = common_data_header.value().data_offset;
+    const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
+
+    switch (id) {
+        case DataSeriesId::ImuData: {
+            std::optional<ImuData> imu_data =
+                nortek::parser::read_from_buffer<ImuData>(
+                    data, data_size, header_offset);
+            if (imu_data.has_value()) {
+                callback_(imu_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::MagnometerData: {
+            std::optional<MagnetoMeterData> magnometer_data =
+                nortek::parser::read_from_buffer<MagnetoMeterData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (magnometer_data.has_value()) {
+                callback_(magnometer_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::FieldCalibrationData: {
+            std::optional<FieldCalibrationData> field_calibration_data =
+                nortek::parser::read_from_buffer<FieldCalibrationData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (field_calibration_data.has_value()) {
+                callback_(field_calibration_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::FastPressureData: {
+            std::optional<FastPressureData> fast_pressure_data =
+                nortek::parser::read_from_buffer<FastPressureData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            if (fast_pressure_data.has_value()) {
+                callback_(fast_pressure_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::AltimeterData: {
+            std::optional<AltimeterData> altimeter_data =
+                nortek::parser::read_from_buffer<AltimeterData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (altimeter_data.has_value()) {
+                callback_(altimeter_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::BottomTrackData: {
+            std::optional<BottomTrackData> bottom_track_data =
+                nortek::parser::read_from_buffer<BottomTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (bottom_track_data.has_value()) {
+                callback_(bottom_track_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::WaterTrackData: {
+            std::optional<WaterTrackData> water_track_data =
+                nortek::parser::read_from_buffer<WaterTrackData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (water_track_data.has_value()) {
+                callback_(water_track_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::CurrentProfileData: {
+            CurrentProfileDatagram datagram =
+                nortek::parser::parse_current_profile_data(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            callback_(datagram);
+            break;
+        }
+        case DataSeriesId::SpectrumDataV3: {
+            SpectrumDatagram spectrum_datagram =
+                nortek::parser::parse_spectrum_data(nucleus_buf_.data(),
+                                                    nucleus_buf_.size());
+            callback_(spectrum_datagram);
+            break;
+        }
+        case DataSeriesId::AhrsData: {
+            std::optional<AhrsDataV2> ahrs_data =
+                nortek::parser::read_from_buffer<AhrsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (ahrs_data.has_value()) {
+                callback_(ahrs_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::InsData: {
+            std::optional<InsDataV2> ins_data =
+                nortek::parser::read_from_buffer<InsDataV2>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+            if (ins_data.has_value()) {
+                callback_(ins_data.value());
+            }
+            break;
+        }
+        case DataSeriesId::StringData: {
+            std::string payload;
+            payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()),
+                           data_size);
+            callback_(payload);
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 void NortekNucleusDriver::start_read_header() {
