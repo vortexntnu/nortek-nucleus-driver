@@ -14,6 +14,11 @@ struct ConnectionParams {
     uint16_t data_local_port;
 };
 
+struct StreamState {
+    std::vector<uint8_t> buf;
+    std::array<uint8_t, 4096> temp;
+};
+
 using NortekNucleusFrame = std::variant<ImuData,
                                         MagnetoMeterData,
                                         FieldCalibrationData,
@@ -34,7 +39,7 @@ class NortekNucleusDriver {
 
     std::error_code open_tcp_sockets(const ConnectionParams& params);
 
-    void start_read(void);
+    void start_read(StreamState& st, asio::ip::tcp::socket& sock);
     void start_read_header();
     void start_read_body(const HeaderData header, std::size_t len);
 
@@ -63,8 +68,11 @@ class NortekNucleusDriver {
                    std::size_t n,
                    const HeaderData header);
 
+    void find_sync_byte(StreamState& st, asio::ip::tcp::socket& sock);
+    void parse_available(StreamState& state);
+
     asio::ip::tcp::socket nucleus_sock_;
-    std::array<uint8_t, 1500> nucleus_buf_;
+    std::array<uint8_t, 4096> nucleus_buf_;
 
     HeaderData header_{};
     std::function<void(NortekNucleusFrame)> callback_;

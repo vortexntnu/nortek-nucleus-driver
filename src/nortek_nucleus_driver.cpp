@@ -12,7 +12,9 @@
 namespace nortek::parser {
 
 template <typename T>
-std::optional<T> read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
+std::optional<T> read_from_buffer(const uint8_t* data,
+                                  std::size_t len,
+                                  std::size_t offset) {
     static_assert(std::is_trivially_copyable_v<T>,
                   "read_from_buffer requires trivially copyable types");
 
@@ -28,7 +30,7 @@ std::optional<T> read_from_buffer(const uint8_t* data, std::size_t len, std::siz
 SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
     std::optional<SpectrumDataV3> spectrum_opt =
         read_from_buffer<SpectrumDataV3>(data, len, 0);
-    if (spectrum_opt.has_value() == false){
+    if (spectrum_opt.has_value() == false) {
         return {};
     }
 
@@ -42,11 +44,12 @@ SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
     std::optional<SpectrumFrequencyHeader> spectrum_freq_header_opt =
         read_from_buffer<SpectrumFrequencyHeader>(data, len, data_offset);
 
-    if (spectrum_freq_header_opt.has_value() == false){
+    if (spectrum_freq_header_opt.has_value() == false) {
         return {};
     }
 
-    const SpectrumFrequencyHeader spectrum_freq_header = spectrum_freq_header_opt.value();
+    const SpectrumFrequencyHeader spectrum_freq_header =
+        spectrum_freq_header_opt.value();
 
     std::vector<int16_t> spectrum_freq_data(bins * beams);
     const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
@@ -66,8 +69,8 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
     std::optional<CurrentProfileData> current_profile_data_opt =
         nortek::parser::read_from_buffer<CurrentProfileData>(
             data, len, sizeof(CommonData));
-    if (current_profile_data_opt.has_value() == false){
-        return{};
+    if (current_profile_data_opt.has_value() == false) {
+        return {};
     }
 
     CurrentProfileData current_profile_data = current_profile_data_opt.value();
@@ -94,20 +97,39 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
     return datagram;
 }
 
-uint16_t calculate_checksum(const uint8_t *packet, size_t len) {
+uint16_t calculate_checksum(const uint8_t* packet, size_t len) {
     uint16_t sum = 0xB58C;
 
     for (size_t i = 0; i < len; i += 2) {
-        sum += (uint16_t) (packet[i] | (packet[i + 1] << 8));
+        sum += (uint16_t)(packet[i] | (packet[i + 1] << 8));
     }
 
     if (len & 1) {
-        sum += (uint16_t) (packet[len - 1] << 8);
+        sum += (uint16_t)(packet[len - 1] << 8);
     }
 
     return sum;
 }
 
+HeaderData parse_header(const uint8_t* data, size_t size) {
+    if (size < sizeof(HeaderData)) {
+        return {};
+    }
+
+    HeaderData header{};
+    memcpy(&header, data, sizeof(HeaderData));
+
+    if (header.sync_byte != 0xA5) {
+        return {};
+    }
+    uint16_t actual_checksum =
+        nortek::parser::calculate_checksum(data, sizeof(HeaderData) - 1);
+
+    if (actual_checksum != header.header_checksum) {
+        return {};
+    }
+    return header;
+}
 
 };  // namespace nortek::parser
 
@@ -133,11 +155,63 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
     return {};
 }
 
-void NortekNucleusDriver::start_read(void) {
-    nucleus_sock_.async_receive(
-        asio::buffer(nucleus_buf_),
-        std::bind(&NortekNucleusDriver::read_header, this,
-                  std::placeholders::_1, std::placeholders::_2));
+void NortekNucleusDriver::start_read(StreamState& st,
+                                     asio::ip::tcp::socket& sock) {
+    find_sync_byte(st, sock);
+}
+
+void NortekNucleusDriver::find_sync_byte(StreamState& st,
+                                         asio::ip::tcp::socket& sock) {
+    sock.async_read_some(asio::buffer(st.temp), [this, &st, &sock](
+                                                    std::error_code ec,
+                                                    std::size_t size) {
+        if (ec)
+            return;
+        st.buf.insert(st.buf.end(), st.temp.begin(), st.temp.begin() + size);
+
+        parse_available(st);
+        find_sync_byte(st, sock);
+    });
+}
+
+void NortekNucleusDriver::parse_available(StreamState& st) {
+    constexpr size_t MAX_FRAME = 1024 * 1024;  // pick a realistic upper bound
+    constexpr uint8_t SYNC_BYTE = 0xA5;
+
+    auto it = std::find(st.buf.begin(), st.buf.end(), SYNC_BYTE);
+
+
+    
+    // if (it == st.buf.end()) {
+    //     if (st.buf.size() > PREAMBLE_KEEP) {
+    //         st.buf.erase(st.buf.begin(), st.buf.end() - PREAMBLE_KEEP);
+    //     }
+    //     return;
+    // }
+
+    if (it != st.buf.begin()) {
+        st.buf.erase(st.buf.begin(), it);
+        it = st.buf.begin();
+    }
+
+    const size_t avail = st.buf.size();
+    if (avail < sizeof(HeaderData)) {
+        return;
+    }
+
+    HeaderData header = nortek::parser::parse_header(st.buf.data(), st.buf.size());
+
+
+    if (header.data_size > MAX_FRAME) {
+        st.buf.erase(st.buf.begin());
+    }
+
+    if (avail < header.data_size) {
+        return;
+    }
+
+    const uint8_t* data = st.buf.data() + sizeof(HeaderData);
+    const size_t data_size = header.data_size;
 }
 
 void NortekNucleusDriver::start_read_header() {
@@ -145,8 +219,6 @@ void NortekNucleusDriver::start_read_header() {
                      std::bind(&NortekNucleusDriver::read_header, this,
                                std::placeholders::_1, std::placeholders::_2));
 }
-
-
 
 void NortekNucleusDriver::read_header(const std::error_code error_code,
                                       std::size_t len) {
@@ -159,10 +231,10 @@ void NortekNucleusDriver::read_header(const std::error_code error_code,
         start_read_header();
         return;
     }
-    uint16_t actual_checksum = nortek::parser::calculate_checksum(reinterpret_cast<const uint8_t*>(&header_),
-                        sizeof(HeaderData) - 1);
+    uint16_t actual_checksum = nortek::parser::calculate_checksum(
+        reinterpret_cast<const uint8_t*>(&header_), sizeof(HeaderData) - 1);
 
-    if (actual_checksum != header_.header_checksum){
+    if (actual_checksum != header_.header_checksum) {
         start_read_header();
         return;
     }
@@ -182,16 +254,17 @@ void NortekNucleusDriver::start_read_body(const HeaderData header,
 void NortekNucleusDriver::read_body(const std::error_code& error_code,
                                     std::size_t len,
                                     const HeaderData header) {
-    uint16_t checksum = nortek::parser::calculate_checksum(nucleus_buf_.data(), len);
+    uint16_t checksum =
+        nortek::parser::calculate_checksum(nucleus_buf_.data(), len);
     if (checksum != header.data_checksum) {
         start_read_header();
         return;
     }
     std::optional<CommonData> common_data_header =
-        nortek::parser::read_from_buffer<CommonData>(
-            nucleus_buf_.data(), nucleus_buf_.size(), 0);
+        nortek::parser::read_from_buffer<CommonData>(nucleus_buf_.data(),
+                                                     nucleus_buf_.size(), 0);
 
-    if (common_data_header.has_value()){
+    if (common_data_header.has_value()) {
         start_read_header();
         return;
     }
@@ -202,9 +275,10 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
 
     switch (id) {
         case DataSeriesId::ImuData: {
-            std::optional<ImuData> imu_data = nortek::parser::read_from_buffer<ImuData>(
-                nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (imu_data.has_value()){
+            std::optional<ImuData> imu_data =
+                nortek::parser::read_from_buffer<ImuData>(
+                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+            if (imu_data.has_value()) {
                 callback_(imu_data.value());
             }
             break;
@@ -213,7 +287,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<MagnetoMeterData> magnometer_data =
                 nortek::parser::read_from_buffer<MagnetoMeterData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (magnometer_data.has_value()){
+            if (magnometer_data.has_value()) {
                 callback_(magnometer_data.value());
             }
             break;
@@ -222,7 +296,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<FieldCalibrationData> field_calibration_data =
                 nortek::parser::read_from_buffer<FieldCalibrationData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (field_calibration_data.has_value()){
+            if (field_calibration_data.has_value()) {
                 callback_(field_calibration_data.value());
             }
             break;
@@ -231,7 +305,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<FastPressureData> fast_pressure_data =
                 nortek::parser::read_from_buffer<FastPressureData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
-            if (fast_pressure_data.has_value()){
+            if (fast_pressure_data.has_value()) {
                 callback_(fast_pressure_data.value());
             }
             break;
@@ -240,7 +314,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<AltimeterData> altimeter_data =
                 nortek::parser::read_from_buffer<AltimeterData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (altimeter_data.has_value()){
+            if (altimeter_data.has_value()) {
                 callback_(altimeter_data.value());
             }
             break;
@@ -249,7 +323,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<BottomTrackData> bottom_track_data =
                 nortek::parser::read_from_buffer<BottomTrackData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (bottom_track_data.has_value()){
+            if (bottom_track_data.has_value()) {
                 callback_(bottom_track_data.value());
             }
             break;
@@ -258,7 +332,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<WaterTrackData> water_track_data =
                 nortek::parser::read_from_buffer<WaterTrackData>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (water_track_data.has_value()){
+            if (water_track_data.has_value()) {
                 callback_(water_track_data.value());
             }
             break;
@@ -273,7 +347,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
         case DataSeriesId::SpectrumDataV3: {
             SpectrumDatagram spectrum_datagram =
                 nortek::parser::parse_spectrum_data(nucleus_buf_.data(),
-                                                           nucleus_buf_.size());
+                                                    nucleus_buf_.size());
             callback_(spectrum_datagram);
             break;
         }
@@ -281,7 +355,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<AhrsDataV2> ahrs_data =
                 nortek::parser::read_from_buffer<AhrsDataV2>(
                     nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
-            if (ahrs_data.has_value()){
+            if (ahrs_data.has_value()) {
                 callback_(ahrs_data.value());
             }
             break;
@@ -290,7 +364,7 @@ void NortekNucleusDriver::read_body(const std::error_code& error_code,
             std::optional<InsDataV2> ins_data =
                 nortek::parser::read_from_buffer<InsDataV2>(
                     nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
-            if (ins_data.has_value()){
+            if (ins_data.has_value()) {
                 callback_(ins_data.value());
             }
             break;
