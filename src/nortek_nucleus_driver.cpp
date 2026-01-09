@@ -182,7 +182,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
 
     if (it == st.buf.end()) {
         if (st.buf.size() > 1) {
-            st.buf.erase(st.buf.begin(), st.buf.end() -1); // keep last byte
+            st.buf.erase(st.buf.begin(), st.buf.end() - 1);  // keep last byte
         }
         return;
     }
@@ -212,8 +212,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
     const size_t data_size = header.data_size;
 
     std::optional<CommonData> common_data_header =
-        nortek::parser::read_from_buffer<CommonData>(data,
-                                                     data_size, 0);
+        nortek::parser::read_from_buffer<CommonData>(data, data_size, 0);
 
     if (common_data_header.has_value()) {
         return;
@@ -226,8 +225,8 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
     switch (id) {
         case DataSeriesId::ImuData: {
             std::optional<ImuData> imu_data =
-                nortek::parser::read_from_buffer<ImuData>(
-                    data, data_size, header_offset);
+                nortek::parser::read_from_buffer<ImuData>(data, data_size,
+                                                          header_offset);
             if (imu_data.has_value()) {
                 callback_(imu_data.value());
             }
@@ -236,7 +235,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::MagnometerData: {
             std::optional<MagnetoMeterData> magnometer_data =
                 nortek::parser::read_from_buffer<MagnetoMeterData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                    data, data_size, header_offset);
             if (magnometer_data.has_value()) {
                 callback_(magnometer_data.value());
             }
@@ -245,7 +244,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::FieldCalibrationData: {
             std::optional<FieldCalibrationData> field_calibration_data =
                 nortek::parser::read_from_buffer<FieldCalibrationData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                    data, data_size, header_offset);
             if (field_calibration_data.has_value()) {
                 callback_(field_calibration_data.value());
             }
@@ -254,7 +253,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::FastPressureData: {
             std::optional<FastPressureData> fast_pressure_data =
                 nortek::parser::read_from_buffer<FastPressureData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+                    data, data_size, data_offset);
             if (fast_pressure_data.has_value()) {
                 callback_(fast_pressure_data.value());
             }
@@ -262,8 +261,8 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         }
         case DataSeriesId::AltimeterData: {
             std::optional<AltimeterData> altimeter_data =
-                nortek::parser::read_from_buffer<AltimeterData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                nortek::parser::read_from_buffer<AltimeterData>(data, data_size,
+                                                                header_offset);
             if (altimeter_data.has_value()) {
                 callback_(altimeter_data.value());
             }
@@ -272,7 +271,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::BottomTrackData: {
             std::optional<BottomTrackData> bottom_track_data =
                 nortek::parser::read_from_buffer<BottomTrackData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                    data, data_size, header_offset);
             if (bottom_track_data.has_value()) {
                 callback_(bottom_track_data.value());
             }
@@ -281,7 +280,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::WaterTrackData: {
             std::optional<WaterTrackData> water_track_data =
                 nortek::parser::read_from_buffer<WaterTrackData>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                    data, data_size, header_offset);
             if (water_track_data.has_value()) {
                 callback_(water_track_data.value());
             }
@@ -289,22 +288,21 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         }
         case DataSeriesId::CurrentProfileData: {
             CurrentProfileDatagram datagram =
-                nortek::parser::parse_current_profile_data(
-                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+                nortek::parser::parse_current_profile_data(data, data_size,
+                                                           data_offset);
             callback_(datagram);
             break;
         }
         case DataSeriesId::SpectrumDataV3: {
             SpectrumDatagram spectrum_datagram =
-                nortek::parser::parse_spectrum_data(nucleus_buf_.data(),
-                                                    nucleus_buf_.size());
+                nortek::parser::parse_spectrum_data(data, data_size);
             callback_(spectrum_datagram);
             break;
         }
         case DataSeriesId::AhrsData: {
             std::optional<AhrsDataV2> ahrs_data =
-                nortek::parser::read_from_buffer<AhrsDataV2>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), header_offset);
+                nortek::parser::read_from_buffer<AhrsDataV2>(data, data_size,
+                                                             header_offset);
             if (ahrs_data.has_value()) {
                 callback_(ahrs_data.value());
             }
@@ -313,7 +311,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         case DataSeriesId::InsData: {
             std::optional<InsDataV2> ins_data =
                 nortek::parser::read_from_buffer<InsDataV2>(
-                    nucleus_buf_.data(), nucleus_buf_.size(), data_offset);
+                    data, data_size, data_offset);
             if (ins_data.has_value()) {
                 callback_(ins_data.value());
             }
@@ -321,8 +319,8 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         }
         case DataSeriesId::StringData: {
             std::string payload;
-            payload.assign(reinterpret_cast<char*>(nucleus_buf_.data()),
-                           data_size);
+            payload.resize(data_size);
+            std::memcpy(payload.data(), data, data_size);
             callback_(payload);
             break;
         }
@@ -331,8 +329,6 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
     }
     st.buf.erase(st.buf.begin(), st.buf.begin() + header.data_size);
 }
-
-
 
 NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
     NucleusReply reply{};

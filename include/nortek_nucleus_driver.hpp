@@ -151,7 +151,6 @@ class NortekNucleusDriver {
     void parse_available(StreamState& state);
 
     asio::ip::tcp::socket nucleus_sock_;
-    std::array<uint8_t, 4096> nucleus_buf_;
     std::function<void(NortekNucleusFrame)> callback_;
 };
 
