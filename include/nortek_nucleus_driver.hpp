@@ -41,23 +41,109 @@ class NortekNucleusDriver {
 
     void start_read(StreamState& st, asio::ip::tcp::socket& sock);
 
+    /**
+     * @brief Send command string to nucleus
+     * 
+     * @param cmd Valid command string
+     *
+     * @return NucleusReply containing statuscode and payload
+     */
     NucleusReply send_command(const std::string& cmd);
 
+    /**
+     * @brief Starts nucleus acoustic measurements
+     *
+     * Should be avoided when drytesting
+     *
+     * @return NucleusStatusCode indicating success or failure
+     */
     NucleusStatusCode start_nucleus();
+
+    /**
+     * @brief Stops nucleus acoustic measurements
+     *
+     * @return NucleusStatusCode indicating success or failure
+     */
     NucleusStatusCode stop_nucleus();
+    /**
+     * @brief Triggers and acoustic reading
+     *
+     * @return NucleusStatusCode indicating success or failure
+     */
     NucleusStatusCode trigger_read();
     NucleusStatusCode get_settings(const std::string& type);
+    /**
+     * @brief Queries the nucleus for cause of error
+     *
+     * @return NucleusReply containing statuscode and eventuall payload
+     */
     NucleusReply get_error();
 
+    /**
+     * @brief Sets bottomtrack settings according to values specifeid in
+     * BottomTrackSettings struct
+     *
+     * @param settings Struct containing BottomTrackSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_bottom_track_settings(
         const BottomTrackSettings& settings);
+    /**
+     * @brief Sets Altimeter settings according to values specifeid in
+     * AltimeterSettings struct
+     *
+     * @param settings Struct containing Altimeter Settings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_altimeter_settings(const AltimeterSettings& settings);
+    /**
+     * @brief Sets FastPressre settings according to values specifeid in
+     * FastPressureSettings struct
+     *
+     * @param settings Struct containing FastPressureSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_fast_pressure_settings(
         const FastPressureSettings& settings);
+    /**
+     * @brief Sets magnetometer settings according to values specifeid in
+     * MagnetometerSettings struct
+     *
+     * @param settings Struct containing MagnetometerSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_magnetometer_settings(
         const MagnetometerSettings& settings);
+    /**
+     * @brief Sets ethernet settings according to values specifeid in
+     * EthernetSettings struct
+     *
+     * @param settings Struct containing EthernetSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_ethernet_settings(const EthernetSettings& settings);
+    /**
+     * @brief Sets SaveSettings settings according to values specifeid in
+     * SaveSettings struct
+     *
+     * @param settings Struct containing SaveSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode save_settings(const SaveSettings settings);
+    /**
+     * @brief Sets Ahrs settings according to values specifeid in
+     * AhrsSettings struct
+     *
+     * @param settings Struct containing AhrsSettings
+     *
+     * @return A statuscode indicating success or failure
+     */
     NucleusStatusCode set_ahrs_settings(const AhrsSettings& settings);
 
    private:
