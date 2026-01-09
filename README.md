@@ -1,41 +1,101 @@
-# Introduction
+# Nortek Nucleus Driver
 
-```
-TODO: Write a simple description / introduction to the repository
-```
+Driver for the Nortek Nucleus 
 
-# Setup
+---
 
-```
-TODO: Write a setup guide
-```
+## Features
 
-## Using pre-commit
+* Modern C++17 interface
+* Header-only networking via **Asio** or **Boost.Asio**
+* Minimal dependencies and easy CMake integration
 
-This project uses [pre-commit](https://github.com/pre-commit/pre-commit) to manage automated checks.
+---
 
-### Install pre-commit
+## Requirements
+
+* **C++17** or newer
+* One of:
+  * Standalone `asio` (header-only), or
+  * `Boost.Asio`
+* Familiarity with the **Nortek User Manual** is recommended
+
+---
+
+## Building
+
 ```bash
-pip install pre-commit
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j
 ```
 
-### Run all hooks manually
+---
+
+## Installing
+
+After building, install the driver system-wide:
+
 ```bash
-pre-commit run --all-files
+cd build
+sudo make install
 ```
 
-### Install the git hook
-This will make the checks run automatically every time you `git commit`:
-```bash
-pre-commit install
+---
+
+## Using the Driver in Your Project
+
+### Include Header
+
+```cpp
+#include <nortek_nucleus_driver.hpp>
 ```
 
-### Update pre-commit hooks
-```bash
-pre-commit autoupdate
+---
+
+## Supported Data Formats
+
+// TODO
+
+---
+
+## Basic Usage
+
+### Network Setup
+
+Ensure that:
+
+* The sonar and host PC are on the **same subnet**
+* Required TCP ports are open and not blocked by a firewall
+
+---
+
+### Example
+
+```cpp
+int main() {
+    }
+```
+---
+## Configuration
+
+
+
+```c++
 ```
 
-## GitHub Actions CI
-- This project uses GitHub Actions for CI.
-- Workflows are located in [`.github/workflows`](.github/workflows/).
-- For more information, see [vortex-ci](https://github.com/vortexntnu/vortex-ci).
+---
+
+## Notes
+
+* The driver does not manage threading beyond the provided `asio::io_context`.
+
+---
+
+## Author
+
+**Nathaniel Førrisdahl**
+
+---
+
