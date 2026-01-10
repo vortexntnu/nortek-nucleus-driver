@@ -1,14 +1,19 @@
+
 # Nortek Nucleus Driver
 
-Driver for the Nortek Nucleus 
+A modern C++ driver for communicating with the **Nortek Nucleus** sonar system.
+
+This driver provides a clean, C++17-based interface for receiving and parsing data from a Nortek Nucleus using TCP networking via **Asio** or **Boost.Asio**.
 
 ---
 
 ## Features
 
-* Modern C++17 interface
+* Modern **C++17** interface
 * Header-only networking via **Asio** or **Boost.Asio**
-* Minimal dependencies and easy CMake integration
+* Minimal dependencies
+* Easy CMake integration
+* Designed for real-time data streaming
 
 ---
 
@@ -16,9 +21,27 @@ Driver for the Nortek Nucleus
 
 * **C++17** or newer
 * One of:
+
   * Standalone `asio` (header-only), or
   * `Boost.Asio`
-* Familiarity with the **Nortek User Manual** is recommended
+* CMake 3.14+ recommended
+* Familiarity with the **Nortek Nucleus User Manual** is strongly recommended
+
+---
+
+## Supported Data Formats
+
+The driver supports parsing the following Nortek data formats:
+
+* IMU Data
+* Magnetometer Data
+* Bottom Track Data
+* Water Track Data
+* Altimeter Data
+* AHRS and INS Data V2
+* Current Profile Data
+* String Data
+* Spectrum Data V3
 
 ---
 
@@ -35,67 +58,93 @@ cmake --build . -j
 
 ## Installing
 
-After building, install the driver system-wide:
+To install the driver system-wide:
 
 ```bash
 cd build
 sudo make install
 ```
 
+This will install headers and CMake config files for easy use in other projects.
+
 ---
 
 ## Using the Driver in Your Project
 
-### Include Header
+### Include the Header
 
 ```cpp
 #include <nortek_nucleus_driver.hpp>
 ```
 
----
+### CMake Integration
 
-## Supported Data Formats
-
-// TODO
-
----
-
-## Basic Usage
-
-### Network Setup
-
-Ensure that:
-
-* The sonar and host PC are on the **same subnet**
-* Required TCP ports are open and not blocked by a firewall
+```cmake
+find_package(nortek_nucleus_driver REQUIRED)
+target_link_libraries(your_target PRIVATE nortek_nucleus_driver)
+```
 
 ---
 
-### Example
+## Network Setup
+
+Before running:
+
+* Ensure the Nucleus and host PC are on the **same subnet**
+* Verify the correct IP address and port from the Nucleus configuration
+* Ensure required TCP ports are not blocked by a firewall
+
+---
+
+## Basic Example
 
 ```cpp
+#include <nortek_nucleus_driver.hpp>
+
 int main() {
-    }
+    asio::io_context io;
+
+    NortekNucleusDriver driver(io, callback);
+
+    driver.open_tcp_sockets(connection_params);
+
+    driver.start_read();
+
+    driver.start_nucleus();
+
+
+    io.run();
+}
 ```
+
 ---
+
 ## Configuration
 
+Typical configuration options include:
 
+* Device IP address
+* TCP port
+* Enabled data formats
+* Output rates
 
-```c++
+Example:
+
+```cpp
 ```
+
+Refer to the Nortek Nucleus manual for valid configuration values.
 
 ---
 
 ## Notes
 
-* The driver does not manage threading beyond the provided `asio::io_context`.
+* The driver does not manage threading beyond the provided `asio::io_context`
+* All callbacks are executed in the context of the Asio event loop
+* Error handling is provided through exceptions and error callbacks
 
 ---
 
 ## Author
 
 **Nathaniel Førrisdahl**
-
----
-
