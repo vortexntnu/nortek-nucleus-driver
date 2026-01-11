@@ -86,26 +86,6 @@ uint16_t calculate_checksum(const uint8_t* packet, size_t len) {
     return sum;
 }
 
-HeaderData parse_header(const uint8_t* data, size_t size) {
-    if (size < sizeof(HeaderData)) {
-        return {};
-    }
-
-    HeaderData header{};
-    memcpy(&header, data, sizeof(HeaderData));
-
-    if (header.sync_byte != 0xA5) {
-        return {};
-    }
-    uint16_t actual_checksum =
-        nortek::parser::calculate_checksum(data, sizeof(HeaderData) - 1);
-
-    if (actual_checksum != header.header_checksum) {
-        return {};
-    }
-    return header;
-}
-
 };  // namespace nortek::parser
 
 NortekNucleusDriver::NortekNucleusDriver(
@@ -172,8 +152,19 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         return;
     }
 
-    HeaderData header =
-        nortek::parser::parse_header(st.buf.data(), st.buf.size());
+    HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
+        st.buf.data(), st.buf.size(), 0);
+
+    if (header.sync_byte != 0xA5) {
+        return;
+    }
+    uint16_t actual_checksum = nortek::parser::calculate_checksum(
+        st.buf.data(), sizeof(HeaderData) - 1);
+
+    if (actual_checksum != header.header_checksum) {
+        return;
+    }
+
 
     if (header.data_size > MAX_FRAME) {
         st.buf.erase(st.buf.begin());
@@ -185,6 +176,12 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
 
     const uint8_t* data = st.buf.data() + sizeof(HeaderData);
     const size_t data_size = header.data_size;
+
+    uint16_t data_checksum = nortek::parser::calculate_checksum(data, data_size);
+
+    if (data_checksum != header.data_checksum){
+        return;
+    }
 
     CommonData common_data_header =
         nortek::parser::read_from_buffer<CommonData>(data, data_size, 0);
