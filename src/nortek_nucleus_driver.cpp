@@ -5,51 +5,31 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <optional>
 #include <string>
 #include "nortek_nucleus_messages.hpp"
 
 namespace nortek::parser {
 
 template <typename T>
-std::optional<T> read_from_buffer(const uint8_t* data,
-                                  std::size_t len,
-                                  std::size_t offset) {
+T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
     static_assert(std::is_trivially_copyable_v<T>,
                   "read_from_buffer requires trivially copyable types");
-
-    if (offset + sizeof(T) > len) {
-        return {};
-    }
-
     T value{};
     std::memcpy(&value, data + offset, sizeof(T));
     return value;
 }
 
 SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
-    std::optional<SpectrumDataV3> spectrum_opt =
+    SpectrumDataV3 spectrum_data =
         read_from_buffer<SpectrumDataV3>(data, len, 0);
-    if (spectrum_opt.has_value() == false) {
-        return {};
-    }
-
-    const SpectrumDataV3 spectrum_data = spectrum_opt.value();
 
     const std::size_t data_offset = spectrum_data.data_offset;
 
     const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
     const uint8_t beams = spectrum_data.num_beam_bins >> 13;
 
-    std::optional<SpectrumFrequencyHeader> spectrum_freq_header_opt =
+    SpectrumFrequencyHeader spectrum_freq_header =
         read_from_buffer<SpectrumFrequencyHeader>(data, len, data_offset);
-
-    if (spectrum_freq_header_opt.has_value() == false) {
-        return {};
-    }
-
-    const SpectrumFrequencyHeader spectrum_freq_header =
-        spectrum_freq_header_opt.value();
 
     std::vector<int16_t> spectrum_freq_data(bins * beams);
     const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
@@ -66,14 +46,9 @@ SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
 CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
                                                   std::size_t len,
                                                   std::size_t data_offset) {
-    std::optional<CurrentProfileData> current_profile_data_opt =
+    CurrentProfileData current_profile_data =
         nortek::parser::read_from_buffer<CurrentProfileData>(
             data, len, sizeof(CommonData));
-    if (current_profile_data_opt.has_value() == false) {
-        return {};
-    }
-
-    CurrentProfileData current_profile_data = current_profile_data_opt.value();
 
     const uint16_t num_cells = current_profile_data.num_cells;
 
@@ -211,110 +186,66 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
     const uint8_t* data = st.buf.data() + sizeof(HeaderData);
     const size_t data_size = header.data_size;
 
-    std::optional<CommonData> common_data_header =
+    CommonData common_data_header =
         nortek::parser::read_from_buffer<CommonData>(data, data_size, 0);
 
-    if (common_data_header.has_value()) {
-        return;
-    }
-
     const std::size_t header_offset = sizeof(CommonData);
-    const std::size_t data_offset = common_data_header.value().data_offset;
+    const std::size_t data_offset = common_data_header.data_offset;
     const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
 
     switch (id) {
         case DataSeriesId::ImuData: {
-            std::optional<ImuData> imu_data =
-                nortek::parser::read_from_buffer<ImuData>(data, data_size,
-                                                          header_offset);
-            if (imu_data.has_value()) {
-                callback_(imu_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<ImuData>(data, data_size,
+                                                                header_offset));
             break;
         }
         case DataSeriesId::MagnometerData: {
-            std::optional<MagnetoMeterData> magnometer_data =
-                nortek::parser::read_from_buffer<MagnetoMeterData>(
-                    data, data_size, header_offset);
-            if (magnometer_data.has_value()) {
-                callback_(magnometer_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<MagnetoMeterData>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
-            std::optional<FieldCalibrationData> field_calibration_data =
-                nortek::parser::read_from_buffer<FieldCalibrationData>(
-                    data, data_size, header_offset);
-            if (field_calibration_data.has_value()) {
-                callback_(field_calibration_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<FieldCalibrationData>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::FastPressureData: {
-            std::optional<FastPressureData> fast_pressure_data =
-                nortek::parser::read_from_buffer<FastPressureData>(
-                    data, data_size, data_offset);
-            if (fast_pressure_data.has_value()) {
-                callback_(fast_pressure_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<FastPressureData>(
+                data, data_size, data_offset));
             break;
         }
         case DataSeriesId::AltimeterData: {
-            std::optional<AltimeterData> altimeter_data =
-                nortek::parser::read_from_buffer<AltimeterData>(data, data_size,
-                                                                header_offset);
-            if (altimeter_data.has_value()) {
-                callback_(altimeter_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<AltimeterData>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::BottomTrackData: {
-            std::optional<BottomTrackData> bottom_track_data =
-                nortek::parser::read_from_buffer<BottomTrackData>(
-                    data, data_size, header_offset);
-            if (bottom_track_data.has_value()) {
-                callback_(bottom_track_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<BottomTrackData>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::WaterTrackData: {
-            std::optional<WaterTrackData> water_track_data =
-                nortek::parser::read_from_buffer<WaterTrackData>(
-                    data, data_size, header_offset);
-            if (water_track_data.has_value()) {
-                callback_(water_track_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<WaterTrackData>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::CurrentProfileData: {
-            CurrentProfileDatagram datagram =
-                nortek::parser::parse_current_profile_data(data, data_size,
-                                                           data_offset);
-            callback_(datagram);
+            callback_(nortek::parser::parse_current_profile_data(
+                data, data_size, data_offset));
             break;
         }
         case DataSeriesId::SpectrumDataV3: {
-            SpectrumDatagram spectrum_datagram =
-                nortek::parser::parse_spectrum_data(data, data_size);
-            callback_(spectrum_datagram);
+            callback_(nortek::parser::parse_spectrum_data(data, data_size));
             break;
         }
         case DataSeriesId::AhrsData: {
-            std::optional<AhrsDataV2> ahrs_data =
-                nortek::parser::read_from_buffer<AhrsDataV2>(data, data_size,
-                                                             header_offset);
-            if (ahrs_data.has_value()) {
-                callback_(ahrs_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<AhrsDataV2>(
+                data, data_size, header_offset));
             break;
         }
         case DataSeriesId::InsData: {
-            std::optional<InsDataV2> ins_data =
-                nortek::parser::read_from_buffer<InsDataV2>(
-                    data, data_size, data_offset);
-            if (ins_data.has_value()) {
-                callback_(ins_data.value());
-            }
+            callback_(nortek::parser::read_from_buffer<InsDataV2>(
+                data, data_size, data_offset));
             break;
         }
         case DataSeriesId::StringData: {
