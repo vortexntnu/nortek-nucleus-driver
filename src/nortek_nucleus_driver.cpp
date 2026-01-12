@@ -155,13 +155,16 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
     HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
         st.buf.data(), st.buf.size(), 0);
 
-    if (header.sync_byte != 0xA5) {
+    if (header.sync_byte != SYNC_BYTE) {
+        st.buf.erase(st.buf.begin());
         return;
     }
+
     uint16_t actual_checksum = nortek::parser::calculate_checksum(
         st.buf.data(), sizeof(HeaderData) - 1);
 
     if (actual_checksum != header.header_checksum) {
+        st.buf.erase(st.buf.begin());
         return;
     }
 
@@ -170,21 +173,24 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         st.buf.erase(st.buf.begin());
     }
 
-    if (avail < header.data_size) {
+    const size_t frame_size = sizeof(HeaderData) + header.data_size;
+
+    if (avail < frame_size) {
         return;
     }
 
-    const uint8_t* data = st.buf.data() + sizeof(HeaderData);
-    const size_t data_size = header.data_size;
+    const uint8_t* payload = st.buf.data() + sizeof(HeaderData);
+    const size_t payload_size = header.data_size;
 
-    uint16_t data_checksum = nortek::parser::calculate_checksum(data, data_size);
+    uint16_t data_checksum = nortek::parser::calculate_checksum(payload, payload_size);
 
     if (data_checksum != header.data_checksum){
+        st.buf.erase(st.buf.begin());
         return;
     }
 
     CommonData common_data_header =
-        nortek::parser::read_from_buffer<CommonData>(data, data_size, 0);
+        nortek::parser::read_from_buffer<CommonData>(payload, payload_size, 0);
 
     const std::size_t header_offset = sizeof(CommonData);
     const std::size_t data_offset = common_data_header.data_offset;
@@ -192,64 +198,64 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
 
     switch (id) {
         case DataSeriesId::ImuData: {
-            callback_(nortek::parser::read_from_buffer<ImuData>(data, data_size,
+            callback_(nortek::parser::read_from_buffer<ImuData>(payload, payload_size,
                                                                 header_offset));
             break;
         }
         case DataSeriesId::MagnometerData: {
             callback_(nortek::parser::read_from_buffer<MagnetoMeterData>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::FieldCalibrationData: {
             callback_(nortek::parser::read_from_buffer<FieldCalibrationData>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::FastPressureData: {
             callback_(nortek::parser::read_from_buffer<FastPressureData>(
-                data, data_size, data_offset));
+                payload, payload_size, data_offset));
             break;
         }
         case DataSeriesId::AltimeterData: {
             callback_(nortek::parser::read_from_buffer<AltimeterData>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::BottomTrackData: {
             callback_(nortek::parser::read_from_buffer<BottomTrackData>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::WaterTrackData: {
             callback_(nortek::parser::read_from_buffer<WaterTrackData>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::CurrentProfileData: {
             callback_(nortek::parser::parse_current_profile_data(
-                data, data_size, data_offset));
+                payload, payload_size, data_offset));
             break;
         }
         case DataSeriesId::SpectrumDataV3: {
-            callback_(nortek::parser::parse_spectrum_data(data, data_size));
+            callback_(nortek::parser::parse_spectrum_data(payload, payload_size));
             break;
         }
         case DataSeriesId::AhrsData: {
             callback_(nortek::parser::read_from_buffer<AhrsDataV2>(
-                data, data_size, header_offset));
+                payload, payload_size, header_offset));
             break;
         }
         case DataSeriesId::InsData: {
             callback_(nortek::parser::read_from_buffer<InsDataV2>(
-                data, data_size, data_offset));
+                payload, payload_size, data_offset));
             break;
         }
         case DataSeriesId::StringData: {
-            std::string payload;
-            payload.resize(data_size);
-            std::memcpy(payload.data(), data, data_size);
-            callback_(payload);
+            std::string data_string;
+            data_string.resize(payload_size);
+            std::memcpy(data_string.data(), payload, payload_size);
+            callback_(data_string);
             break;
         }
         default:
