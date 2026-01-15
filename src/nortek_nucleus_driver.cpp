@@ -110,62 +110,61 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
     return {};
 }
 
-void NortekNucleusDriver::start_read(StreamState& st,
-                                     asio::ip::tcp::socket& sock) {
-    sock.async_read_some(asio::buffer(st.temp), [this, &st, &sock](
+void NortekNucleusDriver::start_read() {
+    nucleus_sock_.async_read_some(asio::buffer(temp), [this](
                                                     std::error_code ec,
                                                     std::size_t size) {
         if (ec)
             return;
-        st.buf.insert(st.buf.end(), st.temp.begin(), st.temp.begin() + size);
+        buf.insert(buf.end(), temp.begin(), temp.begin() + size);
 
-        parse_available(st);
-        start_read(st, sock);
+        parse_available();
+        start_read();
     });
 }
 
-void NortekNucleusDriver::parse_available(StreamState& st) {
+void NortekNucleusDriver::parse_available() {
     constexpr size_t MAX_FRAME = 1500;  // placeholder for now
     constexpr uint8_t SYNC_BYTE = 0xA5;
 
-    auto it = std::find(st.buf.begin(), st.buf.end(), SYNC_BYTE);
+    auto it = std::find(buf.begin(), buf.end(), SYNC_BYTE);
 
-    if (it == st.buf.end()) {
-        if (st.buf.size() > 1) {
-            st.buf.erase(st.buf.begin(), st.buf.end() - 1);  // keep last byte
+    if (it == buf.end()) {
+        if (buf.size() > 1) {
+            buf.erase(buf.begin(), buf.end() - 1);  // keep last byte
         }
         return;
     }
 
-    if (it != st.buf.begin()) {
-        st.buf.erase(st.buf.begin(), it);
-        it = st.buf.begin();
+    if (it != buf.begin()) {
+        buf.erase(buf.begin(), it);
+        it = buf.begin();
     }
 
-    const size_t avail = st.buf.size();
+    const size_t avail = buf.size();
     if (avail < sizeof(HeaderData)) {
         return;
     }
 
     HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
-        st.buf.data(), st.buf.size(), 0);
+        buf.data(), buf.size(), 0);
 
     if (header.sync_byte != SYNC_BYTE) {
-        st.buf.erase(st.buf.begin());
+        buf.erase(buf.begin());
         return;
     }
 
     uint16_t actual_checksum = nortek::parser::calculate_checksum(
-        st.buf.data(), sizeof(HeaderData) - 1);
+        buf.data(), sizeof(HeaderData) - 1);
 
     if (actual_checksum != header.header_checksum) {
-        st.buf.erase(st.buf.begin());
+        buf.erase(buf.begin());
         return;
     }
 
 
     if (header.data_size > MAX_FRAME) {
-        st.buf.erase(st.buf.begin());
+        buf.erase(buf.begin());
     }
 
     const size_t frame_size = sizeof(HeaderData) + header.data_size;
@@ -174,13 +173,13 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         return;
     }
 
-    const uint8_t* payload = st.buf.data() + sizeof(HeaderData);
+    const uint8_t* payload = buf.data() + sizeof(HeaderData);
     const size_t payload_size = header.data_size;
 
     uint16_t data_checksum = nortek::parser::calculate_checksum(payload, payload_size);
 
     if (data_checksum != header.data_checksum){
-        st.buf.erase(st.buf.begin());
+        buf.erase(buf.begin());
         return;
     }
 
@@ -256,7 +255,7 @@ void NortekNucleusDriver::parse_available(StreamState& st) {
         default:
             break;
     }
-    st.buf.erase(st.buf.begin(), st.buf.begin() + header.data_size);
+    buf.erase(buf.begin(), buf.begin() + header.data_size);
 }
 
 NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
