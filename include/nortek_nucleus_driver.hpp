@@ -147,7 +147,6 @@ class NortekNucleusDriver {
     NucleusStatusCode set_ahrs_settings(const AhrsSettings& settings);
 
    private:
-    void find_sync_byte(StreamState& st, asio::ip::tcp::socket& sock);
     void parse_available(StreamState& state);
 
     asio::ip::tcp::socket nucleus_sock_;

@@ -112,11 +112,6 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
 
 void NortekNucleusDriver::start_read(StreamState& st,
                                      asio::ip::tcp::socket& sock) {
-    find_sync_byte(st, sock);
-}
-
-void NortekNucleusDriver::find_sync_byte(StreamState& st,
-                                         asio::ip::tcp::socket& sock) {
     sock.async_read_some(asio::buffer(st.temp), [this, &st, &sock](
                                                     std::error_code ec,
                                                     std::size_t size) {
@@ -125,7 +120,7 @@ void NortekNucleusDriver::find_sync_byte(StreamState& st,
         st.buf.insert(st.buf.end(), st.temp.begin(), st.temp.begin() + size);
 
         parse_available(st);
-        find_sync_byte(st, sock);
+        start_read(st, sock);
     });
 }
 
