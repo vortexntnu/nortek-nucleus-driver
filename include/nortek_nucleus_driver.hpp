@@ -146,6 +146,7 @@ class NortekNucleusDriver {
 
     std::vector<uint8_t> buf;
     std::array<uint8_t, 4096> temp;
+    std::size_t read_index = 0;
     asio::ip::tcp::socket nucleus_sock_;
     std::function<void(NortekNucleusFrame)> callback_;
 };
