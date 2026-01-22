@@ -166,22 +166,23 @@ void NortekNucleusDriver::parse_available() {
             return;
         }
 
-        if (size < sizeof(HeaderData)) {
-            return;
-        }
-
         read_index = static_cast<std::size_t>(std::distance(buf.begin(), it));
 
-        HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
-            buf.data() + read_index, buf.size(), 0);
+        const uint8_t* frame = buf.data() + read_index;
+        const size_t frame_size = buf.size() - read_index;
+        
 
-        uint16_t actual_checksum = nortek::parser::calculate_checksum(
-            buf.data(), sizeof(HeaderData) - 1);
+        HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
+            frame, frame_size, 0);
 
         if (header.sync_byte != SYNC_BYTE) {
             read_index++;
             continue;
         }
+
+        uint16_t actual_checksum = nortek::parser::calculate_checksum(
+            frame, sizeof(HeaderData) - 1);
+
 
         if (actual_checksum != header.header_checksum) {
             read_index++;
@@ -190,31 +191,31 @@ void NortekNucleusDriver::parse_available() {
 
         if (header.data_size > MAX_FRAME) {
             read_index++;
-        }
-
-        const size_t frame_size = sizeof(HeaderData) + header.data_size;
-
-        if (size < frame_size) {
-            return;
+            continue;
         }
 
         const uint8_t* payload = buf.data() + read_index + sizeof(HeaderData);
         const size_t payload_size = header.data_size;
 
+        if (frame_size < payload_size) {
+            return; // not enough bytes
+        }
+
+
         uint16_t data_checksum =
             nortek::parser::calculate_checksum(payload, payload_size);
 
         if (data_checksum != header.data_checksum) {
-            buf.erase(buf.begin());
-            return;
+            read_index++;
+            continue;
         }
 
         CommonData common_data_header =
             nortek::parser::read_from_buffer<CommonData>(payload, payload_size,
                                                          0);
 
-        const std::size_t header_offset = sizeof(CommonData);
-        const std::size_t data_offset = common_data_header.data_offset;
+        constexpr size_t header_offset = sizeof(CommonData);
+        const size_t data_offset = common_data_header.data_offset;
         const DataSeriesId id =
             static_cast<DataSeriesId>(header.data_series_id);
 
@@ -285,7 +286,7 @@ void NortekNucleusDriver::parse_available() {
             default:
                 break;
         }
-        read_index += payload_size;
+        read_index += header_offset + payload_size;
     }
 }
 
