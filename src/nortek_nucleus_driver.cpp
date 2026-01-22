@@ -152,11 +152,12 @@ void NortekNucleusDriver::parse_available() {
             return;
         }
 
-        auto it = std::find(buf.begin(), buf.end(), SYNC_BYTE);
-
         const auto begin_it =
             buf.begin() + static_cast<std::ptrdiff_t>(read_index);
         const auto end_it = buf.end();
+
+        auto it = std::find(begin_it, end_it, SYNC_BYTE);
+
 
         if (it == end_it) {
             if (size > 1) {
