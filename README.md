@@ -131,6 +131,26 @@ Typical configuration options include:
 Example:
 
 ```cpp
+
+struct MagnetometerSettings {
+    int freq;
+    MagnetometerMethod mode;
+    NucleusDataStreamSettings data_stream_settings;
+    DataSeriesId data_format;
+};
+
+MagnetometerSettings mag_settings{};
+mag_settings.freq = 2;
+mag_settings.mode = MagnetometerMethod::Auto;
+mag_settings.data_stream_settings = NucleusDataStreamSettings::On;
+data_format.data_format = DataSeriesId::MagnometerData;
+
+auto status_code = set_magnetometer_settings(mag_settings);
+
+if (status_code != NucleusStatusCode::Ok){
+    // Handle error
+}
+
 ```
 
 Refer to the Nortek Nucleus manual for valid configuration values.
