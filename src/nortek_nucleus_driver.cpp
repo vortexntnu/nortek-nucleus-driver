@@ -158,7 +158,6 @@ void NortekNucleusDriver::parse_available() {
 
         auto it = std::find(begin_it, end_it, SYNC_BYTE);
 
-
         if (it == end_it) {
             if (size > 1) {
                 read_index = buf.size() - 1;
@@ -170,19 +169,17 @@ void NortekNucleusDriver::parse_available() {
 
         const uint8_t* frame = buf.data() + read_index;
         const size_t frame_size = buf.size() - read_index;
-        
 
-        HeaderData header = nortek::parser::read_from_buffer<HeaderData>(
-            frame, frame_size, 0);
+        HeaderData header =
+            nortek::parser::read_from_buffer<HeaderData>(frame, frame_size, 0);
 
         if (header.sync_byte != SYNC_BYTE) {
             read_index++;
             continue;
         }
 
-        uint16_t actual_checksum = nortek::parser::calculate_checksum(
-            frame, sizeof(HeaderData) - 1);
-
+        uint16_t actual_checksum =
+            nortek::parser::calculate_checksum(frame, sizeof(HeaderData) - 1);
 
         if (actual_checksum != header.header_checksum) {
             read_index++;
@@ -198,9 +195,8 @@ void NortekNucleusDriver::parse_available() {
         const size_t payload_size = header.data_size;
 
         if (frame_size < payload_size) {
-            return; // not enough bytes
+            return;  // not enough bytes
         }
-
 
         uint16_t data_checksum =
             nortek::parser::calculate_checksum(payload, payload_size);

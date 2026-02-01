@@ -5,7 +5,9 @@
 #include <asio.hpp>
 #include <cstddef>
 #include <functional>
+#include <string>
 #include <variant>
+#include <vector>
 #include "nortek_nucleus_messages.hpp"
 
 struct ConnectionParams {
@@ -38,7 +40,7 @@ class NortekNucleusDriver {
 
     /**
      * @brief Send command string to nucleus
-     * 
+     *
      * @param cmd Valid command string
      *
      * @return NucleusReply containing statuscode and payload
@@ -70,7 +72,7 @@ class NortekNucleusDriver {
     /**
      * @brief Queries the nucleus for cause of error
      *
-     * @return NucleusReply containing statuscode and eventuall payload
+     * @return NucleusReply containing statuscode and eventually payload
      */
     NucleusReply get_error();
 

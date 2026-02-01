@@ -2,11 +2,10 @@
 #define NORTEK_NUCLEUS_MESSAGES_HPP_
 
 #include <cstdint>
-#include <vector>
 #include <string>
+#include <vector>
 
 enum class DataSeriesId : uint8_t {
-
     SpectrumDataV3 = 0x20,
     ImuData = 0x82,
     MagnometerData = 0x87,

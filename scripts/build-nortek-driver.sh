@@ -44,4 +44,3 @@ install_nortek_nucleus_driver() {
 # ----------------------------- EXECUTE INSTALLATION -----------------------------
 install_cpp_dependencies
 install_nortek_nucleus_driver
-
