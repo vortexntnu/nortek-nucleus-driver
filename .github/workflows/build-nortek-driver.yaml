@@ -22,8 +22,8 @@ jobs:
 
         - name: Make build script executable
           working-directory: nortek_nucleus_driver
-          run: chmod +x scripts/build-nortek-nucleus-driver.sh
+          run: chmod +x scripts/build-nortek-driver.sh
 
         - name: Run build script
           working-directory: nortek_nucleus_driver
-          run: ./scripts/build-nortek-nucleus-driver.sh
+          run: ./scripts/build-nortek-driver.sh
