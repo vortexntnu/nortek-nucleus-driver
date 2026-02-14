@@ -145,6 +145,7 @@ class NortekNucleusDriver {
 
    private:
     void parse_available();
+    void dispatch(const uint8_t* payload, size_t payload_size, const HeaderData& header);
 
     std::vector<uint8_t> buf;
     std::array<uint8_t, 4096> temp;
