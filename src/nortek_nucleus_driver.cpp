@@ -47,8 +47,7 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
                                                   std::size_t len,
                                                   std::size_t data_offset) {
     CurrentProfileData current_profile_data =
-        read_from_buffer<CurrentProfileData>(
-            data, len, sizeof(CommonData));
+        read_from_buffer<CurrentProfileData>(data, len, sizeof(CommonData));
 
     const uint16_t num_cells = current_profile_data.num_cells;
 
@@ -86,7 +85,7 @@ uint16_t calculate_checksum(const uint8_t* packet, size_t len) {
     return sum;
 }
 
-};  // namespace 
+};  // namespace
 
 NortekNucleusDriver::NortekNucleusDriver(
 
@@ -169,125 +168,124 @@ void NortekNucleusDriver::parse_available() {
         const uint8_t* frame = buf.data() + read_index;
         const size_t frame_size = buf.size() - read_index;
 
-        HeaderData header =
-            read_from_buffer<HeaderData>(frame, frame_size, 0);
+        HeaderData header = read_from_buffer<HeaderData>(frame, frame_size, 0);
 
-        if (header.sync_byte != SYNC_BYTE) {
-            read_index++;
-            continue;
-        }
-
-        uint16_t actual_checksum =
-            calculate_checksum(frame, sizeof(HeaderData) - 1);
-
-        if (actual_checksum != header.header_checksum) {
-            read_index++;
-            continue;
-        }
-
-        if (header.data_size > MAX_FRAME) {
-            read_index++;
-            continue;
-        }
 
         const uint8_t* payload = buf.data() + read_index + sizeof(HeaderData);
         const size_t payload_size = header.data_size;
 
-        if (frame_size < payload_size) {
+        const size_t needed = sizeof(HeaderData) + payload_size;
+
+        if (header.sync_byte != SYNC_BYTE) {
+            goto resync;
+        }
+
+        if (calculate_checksum(frame, sizeof(HeaderData) - 1) !=
+            header.header_checksum) {
+            goto resync;
+        }
+
+        if (header.data_size > MAX_FRAME) {
+            goto resync;
+        }
+
+        if (frame_size < needed) {
             return;  // not enough bytes
         }
 
-        uint16_t data_checksum =
-            calculate_checksum(payload, payload_size);
-
-        if (data_checksum != header.data_checksum) {
-            read_index++;
-            continue;
+        if (calculate_checksum(payload, payload_size) != header.data_checksum) {
+            goto resync;
         }
 
         dispatch(payload, payload_size, header);
-
-        read_index += sizeof(CommonData) + payload_size;
+    resync: {
+        auto next =
+            std::find(buf.begin() + read_index + 1, buf.end(), SYNC_BYTE);
+        if (next == buf.end()) {
+            read_index = buf.size() ? buf.size() - 1 : 0;
+            return;
+        }
+        read_index = static_cast<size_t>(std::distance(buf.begin(), next));
+        continue;
+    }
     }
 }
 
-void NortekNucleusDriver::dispatch(const uint8_t* payload, size_t payload_size, const HeaderData& header){
-      CommonData common_data_header =
-          read_from_buffer<CommonData>(payload, payload_size,
-                                                       0);
+void NortekNucleusDriver::dispatch(const uint8_t* payload,
+                                   size_t payload_size,
+                                   const HeaderData& header) {
+    CommonData common_data_header =
+        read_from_buffer<CommonData>(payload, payload_size, 0);
 
-      constexpr size_t header_offset = sizeof(CommonData);
-      const size_t data_offset = common_data_header.data_offset;
-      const DataSeriesId id =
-          static_cast<DataSeriesId>(header.data_series_id);
+    constexpr size_t header_offset = sizeof(CommonData);
+    const size_t data_offset = common_data_header.data_offset;
+    const DataSeriesId id = static_cast<DataSeriesId>(header.data_series_id);
 
-      switch (id) {
-          case DataSeriesId::ImuData: {
-              callback_(read_from_buffer<ImuData>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::MagnometerData: {
-              callback_(read_from_buffer<MagnetoMeterData>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::FieldCalibrationData: {
-              callback_(
-                  read_from_buffer<FieldCalibrationData>(
-                      payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::FastPressureData: {
-              callback_(read_from_buffer<FastPressureData>(
-                  payload, payload_size, data_offset));
-              break;
-          }
-          case DataSeriesId::AltimeterData: {
-              callback_(read_from_buffer<AltimeterData>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::BottomTrackData: {
-              callback_(read_from_buffer<BottomTrackData>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::WaterTrackData: {
-              callback_(read_from_buffer<WaterTrackData>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::CurrentProfileData: {
-              callback_(parse_current_profile_data(
-                  payload, payload_size, data_offset));
-              break;
-          }
-          case DataSeriesId::SpectrumDataV3: {
-              callback_(
-                  parse_spectrum_data(payload, payload_size));
-              break;
-          }
-          case DataSeriesId::AhrsData: {
-              callback_(read_from_buffer<AhrsDataV2>(
-                  payload, payload_size, header_offset));
-              break;
-          }
-          case DataSeriesId::InsData: {
-              callback_(read_from_buffer<InsDataV2>(
-                  payload, payload_size, data_offset));
-              break;
-          }
-          case DataSeriesId::StringData: {
-              std::string data_string;
-              data_string.resize(payload_size);
-              std::memcpy(data_string.data(), payload, payload_size);
-              callback_(data_string);
-              break;
-          }
-          default:
-              break;
-      }
+    switch (id) {
+        case DataSeriesId::ImuData: {
+            callback_(read_from_buffer<ImuData>(payload, payload_size,
+                                                header_offset));
+            break;
+        }
+        case DataSeriesId::MagnometerData: {
+            callback_(read_from_buffer<MagnetoMeterData>(payload, payload_size,
+                                                         header_offset));
+            break;
+        }
+        case DataSeriesId::FieldCalibrationData: {
+            callback_(read_from_buffer<FieldCalibrationData>(
+                payload, payload_size, header_offset));
+            break;
+        }
+        case DataSeriesId::FastPressureData: {
+            callback_(read_from_buffer<FastPressureData>(payload, payload_size,
+                                                         data_offset));
+            break;
+        }
+        case DataSeriesId::AltimeterData: {
+            callback_(read_from_buffer<AltimeterData>(payload, payload_size,
+                                                      header_offset));
+            break;
+        }
+        case DataSeriesId::BottomTrackData: {
+            callback_(read_from_buffer<BottomTrackData>(payload, payload_size,
+                                                        header_offset));
+            break;
+        }
+        case DataSeriesId::WaterTrackData: {
+            callback_(read_from_buffer<WaterTrackData>(payload, payload_size,
+                                                       header_offset));
+            break;
+        }
+        case DataSeriesId::CurrentProfileData: {
+            callback_(
+                parse_current_profile_data(payload, payload_size, data_offset));
+            break;
+        }
+        case DataSeriesId::SpectrumDataV3: {
+            callback_(parse_spectrum_data(payload, payload_size));
+            break;
+        }
+        case DataSeriesId::AhrsData: {
+            callback_(read_from_buffer<AhrsDataV2>(payload, payload_size,
+                                                   header_offset));
+            break;
+        }
+        case DataSeriesId::InsData: {
+            callback_(read_from_buffer<InsDataV2>(payload, payload_size,
+                                                  data_offset));
+            break;
+        }
+        case DataSeriesId::StringData: {
+            std::string data_string;
+            data_string.resize(payload_size);
+            std::memcpy(data_string.data(), payload, payload_size);
+            callback_(data_string);
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
