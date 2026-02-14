@@ -8,7 +8,7 @@
 #include <string>
 #include "nortek_nucleus_messages.hpp"
 
-namespace nortek::parser {
+namespace {
 
 template <typename T>
 T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
@@ -47,7 +47,7 @@ CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
                                                   std::size_t len,
                                                   std::size_t data_offset) {
     CurrentProfileData current_profile_data =
-        nortek::parser::read_from_buffer<CurrentProfileData>(
+        read_from_buffer<CurrentProfileData>(
             data, len, sizeof(CommonData));
 
     const uint16_t num_cells = current_profile_data.num_cells;
@@ -86,7 +86,7 @@ uint16_t calculate_checksum(const uint8_t* packet, size_t len) {
     return sum;
 }
 
-};  // namespace nortek::parser
+};  // namespace 
 
 NortekNucleusDriver::NortekNucleusDriver(
 
@@ -152,8 +152,7 @@ void NortekNucleusDriver::parse_available() {
             return;
         }
 
-        const auto begin_it =
-            buf.begin() + static_cast<std::ptrdiff_t>(read_index);
+        const auto begin_it = buf.begin() + read_index;
         const auto end_it = buf.end();
 
         auto it = std::find(begin_it, end_it, SYNC_BYTE);
@@ -165,13 +164,13 @@ void NortekNucleusDriver::parse_available() {
             return;
         }
 
-        read_index = static_cast<std::size_t>(std::distance(buf.begin(), it));
+        read_index = it - buf.begin();
 
         const uint8_t* frame = buf.data() + read_index;
         const size_t frame_size = buf.size() - read_index;
 
         HeaderData header =
-            nortek::parser::read_from_buffer<HeaderData>(frame, frame_size, 0);
+            read_from_buffer<HeaderData>(frame, frame_size, 0);
 
         if (header.sync_byte != SYNC_BYTE) {
             read_index++;
@@ -179,7 +178,7 @@ void NortekNucleusDriver::parse_available() {
         }
 
         uint16_t actual_checksum =
-            nortek::parser::calculate_checksum(frame, sizeof(HeaderData) - 1);
+            calculate_checksum(frame, sizeof(HeaderData) - 1);
 
         if (actual_checksum != header.header_checksum) {
             read_index++;
@@ -199,7 +198,7 @@ void NortekNucleusDriver::parse_available() {
         }
 
         uint16_t data_checksum =
-            nortek::parser::calculate_checksum(payload, payload_size);
+            calculate_checksum(payload, payload_size);
 
         if (data_checksum != header.data_checksum) {
             read_index++;
@@ -207,7 +206,7 @@ void NortekNucleusDriver::parse_available() {
         }
 
         CommonData common_data_header =
-            nortek::parser::read_from_buffer<CommonData>(payload, payload_size,
+            read_from_buffer<CommonData>(payload, payload_size,
                                                          0);
 
         constexpr size_t header_offset = sizeof(CommonData);
@@ -217,58 +216,58 @@ void NortekNucleusDriver::parse_available() {
 
         switch (id) {
             case DataSeriesId::ImuData: {
-                callback_(nortek::parser::read_from_buffer<ImuData>(
+                callback_(read_from_buffer<ImuData>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::MagnometerData: {
-                callback_(nortek::parser::read_from_buffer<MagnetoMeterData>(
+                callback_(read_from_buffer<MagnetoMeterData>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::FieldCalibrationData: {
                 callback_(
-                    nortek::parser::read_from_buffer<FieldCalibrationData>(
+                    read_from_buffer<FieldCalibrationData>(
                         payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::FastPressureData: {
-                callback_(nortek::parser::read_from_buffer<FastPressureData>(
+                callback_(read_from_buffer<FastPressureData>(
                     payload, payload_size, data_offset));
                 break;
             }
             case DataSeriesId::AltimeterData: {
-                callback_(nortek::parser::read_from_buffer<AltimeterData>(
+                callback_(read_from_buffer<AltimeterData>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::BottomTrackData: {
-                callback_(nortek::parser::read_from_buffer<BottomTrackData>(
+                callback_(read_from_buffer<BottomTrackData>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::WaterTrackData: {
-                callback_(nortek::parser::read_from_buffer<WaterTrackData>(
+                callback_(read_from_buffer<WaterTrackData>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::CurrentProfileData: {
-                callback_(nortek::parser::parse_current_profile_data(
+                callback_(parse_current_profile_data(
                     payload, payload_size, data_offset));
                 break;
             }
             case DataSeriesId::SpectrumDataV3: {
                 callback_(
-                    nortek::parser::parse_spectrum_data(payload, payload_size));
+                    parse_spectrum_data(payload, payload_size));
                 break;
             }
             case DataSeriesId::AhrsData: {
-                callback_(nortek::parser::read_from_buffer<AhrsDataV2>(
+                callback_(read_from_buffer<AhrsDataV2>(
                     payload, payload_size, header_offset));
                 break;
             }
             case DataSeriesId::InsData: {
-                callback_(nortek::parser::read_from_buffer<InsDataV2>(
+                callback_(read_from_buffer<InsDataV2>(
                     payload, payload_size, data_offset));
                 break;
             }
