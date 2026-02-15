@@ -43,6 +43,13 @@ SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
     return spectrum_datagram;
 }
 
+ImuData parse_imu(const uint8_t* data, size_t len, size_t offset){
+    ImuData imu_data{};
+    std::memcpy(&imu_data, data, 4);
+    std::memcpy(reinterpret_cast<uint8_t*>(&imu_data) + 4, data + offset, sizeof(ImuData) - 4);
+    return imu_data;
+}
+
 CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
                                                   std::size_t len,
                                                   std::size_t data_offset) {
@@ -243,8 +250,7 @@ void NortekNucleusDriver::dispatch(const uint8_t* payload,
 
     switch (id) {
         case DataSeriesId::ImuData: {
-            callback_(read_from_buffer<ImuData>(payload, payload_size,
-                                                header_offset));
+            callback_(parse_imu(payload, payload_size, data_offset));
             break;
         }
         case DataSeriesId::MagnometerData: {

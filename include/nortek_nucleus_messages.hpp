@@ -148,6 +148,7 @@ struct FastPressureData {
 struct BottomTrackData {
     uint32_t status;
     uint32_t serial_number;
+    uint32_t reserved1[1];
 
     float sound_velocity;
     float water_temperature;
