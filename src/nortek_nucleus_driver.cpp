@@ -109,6 +109,13 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
     return {};
 }
 
+std::error_code NortekNucleusDriver::enter_password(const ConnectionParams& params) {
+    std::error_code error_code{};
+    std::string pass = params.password + "\r\n";
+    asio::write(nucleus_sock_, asio::buffer(pass), error_code);
+    return error_code;
+}
+
 void NortekNucleusDriver::start_read() {
     nucleus_sock_.async_read_some(
         asio::buffer(temp), [this](std::error_code ec, std::size_t size) {
@@ -169,7 +176,6 @@ void NortekNucleusDriver::parse_available() {
         const size_t frame_size = buf.size() - read_index;
 
         HeaderData header = read_from_buffer<HeaderData>(frame, frame_size, 0);
-
 
         const uint8_t* payload = buf.data() + read_index + sizeof(HeaderData);
         const size_t payload_size = header.data_size;

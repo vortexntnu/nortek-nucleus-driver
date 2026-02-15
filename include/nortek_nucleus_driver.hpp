@@ -13,7 +13,7 @@
 struct ConnectionParams {
     std::string remote_ip;
     uint16_t data_remote_port;
-    uint16_t data_local_port;
+    std::string password;
 };
 
 using NortekNucleusFrame = std::variant<ImuData,
@@ -37,6 +37,8 @@ class NortekNucleusDriver {
     std::error_code open_tcp_sockets(const ConnectionParams& params);
 
     void start_read();
+
+    std::error_code enter_password(const ConnectionParams& params);
 
     /**
      * @brief Send command string to nucleus
@@ -145,7 +147,9 @@ class NortekNucleusDriver {
 
    private:
     void parse_available();
-    void dispatch(const uint8_t* payload, size_t payload_size, const HeaderData& header);
+    void dispatch(const uint8_t* payload,
+                  size_t payload_size,
+                  const HeaderData& header);
 
     std::vector<uint8_t> buf;
     std::array<uint8_t, 4096> temp;
