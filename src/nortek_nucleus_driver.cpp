@@ -299,7 +299,7 @@ void NortekNucleusDriver::dispatch(const uint8_t* payload,
         }
         case DataSeriesId::InsData: {
             callback_(read_from_buffer<InsDataV2>(payload, payload_size,
-                                                  data_offset));
+                                                  data_offset + 72));
             break;
         }
         case DataSeriesId::StringData: {
