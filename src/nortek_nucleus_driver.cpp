@@ -146,6 +146,8 @@ void NortekNucleusDriver::parse_available() {
     constexpr size_t MAX_FRAME = 1500;  // placeholder for now
     constexpr uint8_t SYNC_BYTE = 0xA5;
 
+    static constexpr uint8_t PREAMBLE[2] = {0xA5, 0x0A};
+
     auto compact_if_needed = [&]() {
         if (read_index == 0)
             return;
@@ -172,7 +174,8 @@ void NortekNucleusDriver::parse_available() {
         const auto begin_it = buf.begin() + read_index;
         const auto end_it = buf.end();
 
-        auto it = std::find(begin_it, end_it, SYNC_BYTE);
+        auto it = std::search(begin_it, end_it, std::begin(PREAMBLE),
+                              std::end(PREAMBLE));
 
         if (it == end_it) {
             if (size > 1) {
@@ -197,7 +200,7 @@ void NortekNucleusDriver::parse_available() {
             goto resync;
         }
 
-        if (calculate_checksum(frame, sizeof(HeaderData) - 1) !=
+        if (calculate_checksum(frame, sizeof(HeaderData) - 2) !=
             header.header_checksum) {
             goto resync;
         }
@@ -216,8 +219,8 @@ void NortekNucleusDriver::parse_available() {
 
         dispatch(payload, payload_size, header);
     resync: {
-        auto next =
-            std::find(buf.begin() + read_index + 1, buf.end(), SYNC_BYTE);
+        auto next = std::search(buf.begin() + read_index + 1, buf.end(),
+                                std::begin(PREAMBLE), std::end(PREAMBLE));
         if (next == buf.end()) {
             read_index = buf.size() ? buf.size() - 1 : 0;
             return;
