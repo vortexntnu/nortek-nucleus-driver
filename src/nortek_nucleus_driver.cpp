@@ -109,11 +109,22 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
     return {};
 }
 
-std::error_code NortekNucleusDriver::enter_password(const ConnectionParams& params) {
-    std::error_code error_code{};
-    std::string pass = params.password + "\r\n";
-    asio::write(nucleus_sock_, asio::buffer(pass), error_code);
-    return error_code;
+std::error_code NortekNucleusDriver::enter_password(
+    const ConnectionParams& params) {
+    std::error_code ec;
+
+    asio::streambuf buffer;
+
+    // Wait until the prompt arrives
+    asio::read_until(nucleus_sock_, buffer, "Please enter password:", ec);
+    if (ec)
+        return ec;
+
+    // Send password + CRLF
+    std::string msg = params.password + "\r\n";
+    asio::write(nucleus_sock_, asio::buffer(msg), ec);
+
+    return ec;
 }
 
 void NortekNucleusDriver::start_read() {
