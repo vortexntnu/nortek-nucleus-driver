@@ -123,6 +123,8 @@ struct AltimeterData {
     uint32_t altimeter_status;
     uint32_t serial_number;
 
+    uint32_t reserved;
+
     float sound_velocity;
     float water_temperature;
     float pressure;

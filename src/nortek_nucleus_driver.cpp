@@ -122,12 +122,10 @@ std::error_code NortekNucleusDriver::enter_password(
 
     asio::streambuf buffer;
 
-    // Wait until the prompt arrives
     asio::read_until(nucleus_sock_, buffer, "Please enter password:", ec);
     if (ec)
         return ec;
 
-    // Send password + CRLF
     std::string msg = params.password + "\r\n";
     asio::write(nucleus_sock_, asio::buffer(msg), ec);
 
