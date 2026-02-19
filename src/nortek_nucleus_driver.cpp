@@ -43,10 +43,11 @@ SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
     return spectrum_datagram;
 }
 
-ImuData parse_imu(const uint8_t* data, size_t len, size_t offset){
+ImuData parse_imu(const uint8_t* data, size_t len, size_t offset) {
     ImuData imu_data{};
     std::memcpy(&imu_data, data, 4);
-    std::memcpy(reinterpret_cast<uint8_t*>(&imu_data) + 4, data + offset, sizeof(ImuData) - 4);
+    std::memcpy(reinterpret_cast<uint8_t*>(&imu_data) + 4, data + offset,
+                sizeof(ImuData) - 4);
     return imu_data;
 }
 
