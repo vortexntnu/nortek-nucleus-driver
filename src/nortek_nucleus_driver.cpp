@@ -357,9 +357,9 @@ NucleusStatusCode NortekNucleusDriver::trigger_read() {
     return send_command(cmd).status;
 }
 
-NucleusStatusCode NortekNucleusDriver::get_settings(const std::string& type) {
+NucleusReply NortekNucleusDriver::get_settings(const std::string& type) {
     std::string cmd = "GET" + type;
-    return send_command(cmd).status;
+    return send_command(cmd);
 }
 
 NucleusReply NortekNucleusDriver::get_error() {

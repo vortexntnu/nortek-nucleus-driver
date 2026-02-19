@@ -70,7 +70,7 @@ class NortekNucleusDriver {
      * @return NucleusStatusCode indicating success or failure
      */
     NucleusStatusCode trigger_read();
-    NucleusStatusCode get_settings(const std::string& type);
+    NucleusReply get_settings(const std::string& type);
     /**
      * @brief Queries the nucleus for cause of error
      *
