@@ -416,10 +416,10 @@ NucleusStatusCode NortekNucleusDriver::set_bottom_track_settings(
 
     switch (settings.data_format) {
         case NucleusDataFormats::BottomTrackBinaryFormat:
-            cmd += "DF=180,";
+            cmd += "DF=180";
             break;
         case NucleusDataFormats::BottomTrackRDIPD6:
-            cmd += "DF=156,";
+            cmd += "DF=156";
         default:
             break;
     }
@@ -448,7 +448,7 @@ NucleusStatusCode NortekNucleusDriver::set_altimeter_settings(
 
     switch (settings.data_format) {
         case NucleusDataFormats::AltimeterFormat:
-            cmd += "DF=170,";
+            cmd += "DF=170";
             break;
         default:
             break;
@@ -485,7 +485,7 @@ NucleusStatusCode NortekNucleusDriver::set_fast_pressure_settings(
 
     switch (settings.data_format) {
         case NucleusDataFormats::FastPressureFormat:
-            cmd += "DF=150,";
+            cmd += "DF=150";
             break;
         default:
             break;
@@ -497,7 +497,7 @@ NucleusStatusCode NortekNucleusDriver::set_magnetometer_settings(
     const MagnetometerSettings& settings) {
     std::string cmd = "SETMAG,";
 
-    cmd += "FREQ=" + std::to_string(settings.freq) + ",";
+    // cmd += "FREQ=" + std::to_string(settings.freq) + ",";
 
     switch (settings.mode) {
         case MagnetometerMethod::Off:
@@ -530,7 +530,7 @@ NucleusStatusCode NortekNucleusDriver::set_magnetometer_settings(
 
     switch (settings.data_format) {
         case DataSeriesId::MagnometerData:
-            cmd += "DF=135,";
+            cmd += "DF=135";
             break;
         default:
             break;
@@ -624,7 +624,7 @@ NucleusStatusCode NortekNucleusDriver::set_ahrs_settings(
 
     switch (settings.data_format) {
         case DataSeriesId::AhrsData:
-            cmd += "DF=210,";
+            cmd += "DF=210";
             break;
         default:
             break;
