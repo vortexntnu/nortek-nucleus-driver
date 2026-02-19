@@ -104,11 +104,22 @@ Before running:
 int main() {
     asio::io_context io;
 
+    ConnectionParams params;
+    params.remote_ip = "192.169.53.100";
+    params.data_remote_port = 9000;
+    params.password = "very_secret_password";
+
     NortekNucleusDriver driver(io, callback);
 
-    driver.open_tcp_sockets(connection_params);
+    driver.open_tcp_sockets(params);
+
+    // If the Nucleus is configured to use a password
+    driver.enter_password(params);
+
 
     driver.start_read();
+
+    // Settings should be configured before start_nucleus()
 
     driver.start_nucleus();
 
@@ -161,7 +172,6 @@ Refer to the Nortek Nucleus manual for valid configuration values.
 
 * The driver does not manage threading beyond the provided `asio::io_context`
 * All callbacks are executed in the context of the Asio event loop
-* Error handling is provided through exceptions and error callbacks
 
 ---
 
