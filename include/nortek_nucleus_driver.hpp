@@ -145,6 +145,8 @@ class NortekNucleusDriver {
      */
     NucleusStatusCode set_ahrs_settings(const AhrsSettings& settings);
 
+    NucleusStatusCode set_imu_settings(const ImuSettings& settings);
+
    private:
     void parse_available();
     void dispatch(const uint8_t* payload,

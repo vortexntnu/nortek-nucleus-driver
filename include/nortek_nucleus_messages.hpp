@@ -378,6 +378,13 @@ struct MagnetometerSettings {
     DataSeriesId data_format;
 };
 
+
+struct ImuSettings {
+    int freq;
+    NucleusDataStreamSettings data_stream_settings;
+    DataSeriesId data_format;
+};
+
 struct EthernetSettings {
     bool use_static_ip;
     std::string ip;

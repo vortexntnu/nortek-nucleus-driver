@@ -539,6 +539,37 @@ NucleusStatusCode NortekNucleusDriver::set_magnetometer_settings(
     return send_command(cmd).status;
 }
 
+NucleusStatusCode NortekNucleusDriver::set_imu_settings(
+    const ImuSettings& settings) {
+    std::string cmd = "SETIMU,";
+
+    cmd += "FREQ=" + std::to_string(settings.freq) + ",";
+
+    switch (settings.data_stream_settings) {
+        case NucleusDataStreamSettings::Off:
+            cmd += "DS=\"OFF\",";
+            break;
+        case NucleusDataStreamSettings::On:
+            cmd += "DS=\"ON\",";
+            break;
+        case NucleusDataStreamSettings::Cmd:
+            cmd += "DS=\"CMD\",";
+            break;
+        case NucleusDataStreamSettings::Data:
+            cmd += "DS=\"DATA\",";
+            break;
+    }
+
+    switch (settings.data_format) {
+        case DataSeriesId::ImuData:
+            cmd += "DF=130";
+            break;
+        default:
+            break;
+    }
+    return send_command(cmd).status;
+}
+
 NucleusStatusCode NortekNucleusDriver::set_ethernet_settings(
     const EthernetSettings& settings) {
     std::string cmd = "SETETH,";
