@@ -21,10 +21,8 @@ This driver provides a clean, C++17-based interface for receiving and parsing da
 
 * **C++17** or newer
 * One of:
-
   * Standalone `asio` (header-only), or
   * `Boost.Asio`
-* CMake 3.14+ recommended
 * Familiarity with the **Nortek Nucleus User Manual** is strongly recommended
 
 ---
@@ -120,7 +118,6 @@ int main() {
     driver.start_read();
 
     // Settings should be configured before start_nucleus()
-
     driver.start_nucleus();
 
 
@@ -151,7 +148,7 @@ struct MagnetometerSettings {
 };
 
 MagnetometerSettings mag_settings{};
-mag_settings.freq = 2;
+mag_settings.freq = 75;
 mag_settings.mode = MagnetometerMethod::Auto;
 mag_settings.data_stream_settings = NucleusDataStreamSettings::On;
 data_format.data_format = DataSeriesId::MagnometerData;
@@ -166,8 +163,36 @@ if (status_code != NucleusStatusCode::Ok){
 
 Refer to the Nortek Nucleus manual for valid configuration values.
 
----
 
+## Error Handling
+
+When a command fails, the **Nucleus** responds with:
+
+```
+"ERROR"
+```
+
+After receiving this response, you can retrieve detailed error information using the `get_error()` function.
+
+### Retrieving the Error Message
+
+```cpp
+auto error_message = driver.get_error();
+
+std::string error_string;
+error_string.assign(error_message.payload);
+
+std::cout << error_string << std::endl;
+```
+
+### Explanation
+
+* `driver.get_error()` retrieves the last error reported by the Nucleus.
+* The error details are stored in the `payload` field of the returned object.
+* The payload is copied into a `std::string` for easier handling and display.
+* The error message can then be logged or printed to the console.
+
+---
 ## Notes
 
 * The driver does not manage threading beyond the provided `asio::io_context`
