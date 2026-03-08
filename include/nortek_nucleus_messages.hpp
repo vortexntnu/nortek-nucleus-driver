@@ -90,6 +90,10 @@ struct InsDataV2 {
     float velocity_ned_y;
     float velocity_ned_z;
 
+    float velocity_body_x;
+    float velocity_body_y;
+    float velocity_body_z;
+
     float speed_over_ground;
 
     float turn_rate_x;
