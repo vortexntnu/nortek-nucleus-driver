@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <string>dr
+#include <string>
 #include "nortek_nucleus_messages.hpp"
 
 namespace {
