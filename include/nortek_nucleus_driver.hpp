@@ -2,6 +2,7 @@
 #ifndef NORTEK_NUCLEUS_DRIVER_HPP_
 #define NORTEK_NUCLEUS_DRIVER_HPP_
 
+#include <utility>
 #include <asio.hpp>
 #include <cstddef>
 #include <functional>
@@ -10,7 +11,7 @@
 #include <vector>
 #include "nortek_nucleus_messages.hpp"
 
-struct ConnectionParams {
+struct NortekConnectionParams {
     std::string remote_ip;
     uint16_t data_remote_port;
     std::string password;
@@ -34,11 +35,11 @@ class NortekNucleusDriver {
     explicit NortekNucleusDriver(asio::io_context& io,
                                  std::function<void(NortekNucleusFrame)>);
 
-    std::error_code open_tcp_sockets(const ConnectionParams& params);
+    std::error_code open_tcp_sockets(const NortekConnectionParams& params);
 
     void start_read();
 
-    std::error_code enter_password(const ConnectionParams& params);
+    std::error_code enter_password(const NortekConnectionParams& params);
 
     /**
      * @brief Send command string to nucleus

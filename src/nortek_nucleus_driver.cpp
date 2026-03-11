@@ -102,7 +102,7 @@ NortekNucleusDriver::NortekNucleusDriver(
     : nucleus_sock_(io), callback_(callback) {}
 
 std::error_code NortekNucleusDriver::open_tcp_sockets(
-    const ConnectionParams& params) {
+    const NortekConnectionParams& params) {
     std::error_code ec;
     auto addr = asio::ip::make_address(params.remote_ip, ec);
     if (ec) {
@@ -118,7 +118,7 @@ std::error_code NortekNucleusDriver::open_tcp_sockets(
 }
 
 std::error_code NortekNucleusDriver::enter_password(
-    const ConnectionParams& params) {
+    const NortekConnectionParams& params) {
     std::error_code ec;
 
     asio::streambuf buffer;
