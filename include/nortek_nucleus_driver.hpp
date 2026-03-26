@@ -2,8 +2,12 @@
 #ifndef NORTEK_NUCLEUS_DRIVER_HPP_
 #define NORTEK_NUCLEUS_DRIVER_HPP_
 
+// Need to include utility before asio
+// clang-format off
 #include <utility>
 #include <asio.hpp>
+// clang-format on
+
 #include <cstddef>
 #include <functional>
 #include <string>
