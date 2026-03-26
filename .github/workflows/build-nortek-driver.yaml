@@ -1,0 +1,29 @@
+name: Build NORTEK_NUCLEUS_DRIVER
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *' # Runs daily at 03:00 UTC
+
+jobs:
+  build:
+      name: Build NORTEK_NUCLEUS driver
+      runs-on: ubuntu-22.04
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            path: nortek_nucleus_driver
+
+        - name: Make build script executable
+          working-directory: nortek_nucleus_driver
+          run: chmod +x scripts/build-nortek-driver.sh
+
+        - name: Run build script
+          working-directory: nortek_nucleus_driver
+          run: ./scripts/build-nortek-driver.sh
