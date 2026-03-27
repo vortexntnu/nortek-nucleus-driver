@@ -418,4 +418,10 @@ struct AhrsSettings {
     DataSeriesId data_format;
 };
 
+struct InstrumentSettings {
+    double rotxy{0.0};  // Yaw alignment offset, rotation from VEHICLE to Nucleus about XY plane [deg, -180..180]
+    double rotyz{0.0};  // Roll alignment offset [deg, -180..180]
+    double rotxz{0.0};  // Pitch alignment offset [deg, -180..180]
+};
+
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_

@@ -152,6 +152,18 @@ class NortekNucleusDriver {
 
     NucleusStatusCode set_imu_settings(const ImuSettings& settings);
 
+    /**
+     * @brief Sets instrument mounting alignment (SETINST) and saves config.
+     *
+     * ROTXY is the yaw offset (rotation from vehicle to Nucleus about the XY plane).
+     * Use ROTXY=180 to flip a 180° yaw-mounted instrument.
+     * Settings are saved to persistent config (SAVE,CONFIG) after applying.
+     *
+     * @param settings InstrumentSettings with rotxy, rotyz, rotxz in degrees [-180, 180]
+     * @return NucleusStatusCode indicating success or failure
+     */
+    NucleusStatusCode set_instrument_settings(const InstrumentSettings& settings);
+
    private:
     void parse_available();
     void dispatch(const uint8_t* payload,

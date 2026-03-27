@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include "nortek_nucleus_messages.hpp"
 
@@ -617,6 +619,27 @@ NucleusStatusCode NortekNucleusDriver::save_settings(
     }
 
     return send_command(cmd).status;
+}
+
+NucleusStatusCode NortekNucleusDriver::set_instrument_settings(
+    const InstrumentSettings& settings) {
+    auto fmt = [](double v) {
+        std::ostringstream ss;
+        ss << std::fixed << std::setprecision(2) << v;
+        return ss.str();
+    };
+
+    std::string cmd = "SETINST,";
+    cmd += "ROTXY=" + fmt(settings.rotxy) + ",";
+    cmd += "ROTYZ=" + fmt(settings.rotyz) + ",";
+    cmd += "ROTXZ=" + fmt(settings.rotxz);
+
+    auto sc = send_command(cmd).status;
+    if (sc != NucleusStatusCode::Ok) {
+        return sc;
+    }
+
+    return send_command("SAVE,CONFIG").status;
 }
 
 NucleusStatusCode NortekNucleusDriver::set_ahrs_settings(
