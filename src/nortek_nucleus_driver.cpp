@@ -53,6 +53,14 @@ ImuData parse_imu(const uint8_t* data, size_t len, size_t offset) {
     return imu_data;
 }
 
+AhrsDataV2 parse_ahrsv2_data(const uint8_t* data, size_t len, size_t offset){
+    AhrsDataV2 ahrs_v2{};
+    std::memcpy(&ahrs_v2, data + sizeof(CommonData), 20);
+    std::memcpy(reinterpret_cast<uint8_t*>(&ahrs_v2) + 20, data + offset,
+                sizeof(ImuData) - 20);
+    return ahrs_v2;
+}
+
 CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
                                                   std::size_t len,
                                                   std::size_t data_offset) {
@@ -294,8 +302,8 @@ void NortekNucleusDriver::dispatch(const uint8_t* payload,
             break;
         }
         case DataSeriesId::AhrsData: {
-            callback_(read_from_buffer<AhrsDataV2>(payload, payload_size,
-                                                   header_offset));
+            callback_(parse_ahrsv2_data(payload, payload_size,
+                                                   data_offset));
             break;
         }
         case DataSeriesId::InsData: {
