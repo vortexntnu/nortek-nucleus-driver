@@ -55,9 +55,9 @@ ImuData parse_imu(const uint8_t* data, size_t len, size_t offset) {
 
 AhrsDataV2 parse_ahrsv2_data(const uint8_t* data, size_t len, size_t offset){
     AhrsDataV2 ahrs_v2{};
-    std::memcpy(&ahrs_v2, data + sizeof(CommonData), 20);
-    std::memcpy(reinterpret_cast<uint8_t*>(&ahrs_v2) + 20, data + offset,
-                sizeof(AhrsDataV2) - 20);
+    std::memcpy(&ahrs_v2, data + sizeof(CommonData), 24);
+    std::memcpy(reinterpret_cast<uint8_t*>(&ahrs_v2) + 24, data + offset,
+                sizeof(AhrsDataV2) - 24);
     return ahrs_v2;
 }
 
