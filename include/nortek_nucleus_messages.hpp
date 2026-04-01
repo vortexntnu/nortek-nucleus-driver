@@ -49,6 +49,7 @@ struct CommonData {
 
 struct AhrsDataV2 {
     uint32_t serial_number;
+    uint32_t unused;
     uint8_t operation_mode;
     uint8_t reserved[3];
 
