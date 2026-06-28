@@ -9,6 +9,7 @@ include(CMakePackageConfigHelpers)
 
 add_library(nortek_nucleus_driver
   src/nortek_nucleus_driver.cpp
+  src/nortek_nucleus_parser.cpp
 )
 target_compile_features(nortek_nucleus_driver PUBLIC cxx_std_20)
 

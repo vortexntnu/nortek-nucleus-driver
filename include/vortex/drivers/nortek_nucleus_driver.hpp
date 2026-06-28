@@ -5,7 +5,7 @@
 // Need to include utility before asio
 // clang-format off
 #include <utility>
-#include <asio.hpp>
+#include <boost/asio.hpp>
 // clang-format on
 
 #include <cstddef>
@@ -14,6 +14,8 @@
 #include <variant>
 #include <vector>
 #include "nortek_nucleus_messages.hpp"
+
+namespace vortex::drivers::dvl {
 
 struct NortekConnectionParams {
     std::string remote_ip;
@@ -36,14 +38,16 @@ using NortekNucleusFrame = std::variant<ImuData,
 
 class NortekNucleusDriver {
    public:
-    explicit NortekNucleusDriver(asio::io_context& io,
+    explicit NortekNucleusDriver(boost::asio::io_context& io,
                                  std::function<void(NortekNucleusFrame)>);
 
-    std::error_code open_tcp_sockets(const NortekConnectionParams& params);
+    [[nodiscard]] boost::system::error_code open_tcp_sockets(
+        const NortekConnectionParams& params);
 
     void start_read();
 
-    std::error_code enter_password(const NortekConnectionParams& params);
+    boost::system::error_code enter_password(
+        const NortekConnectionParams& params);
 
     /**
      * @brief Send command string to nucleus
@@ -155,14 +159,16 @@ class NortekNucleusDriver {
     /**
      * @brief Sets instrument mounting alignment (SETINST) and saves config.
      *
-     * ROTXY is the yaw offset (rotation from vehicle to Nucleus about the XY plane).
-     * Use ROTXY=180 to flip a 180° yaw-mounted instrument.
-     * Settings are saved to persistent config (SAVE,CONFIG) after applying.
+     * ROTXY is the yaw offset (rotation from vehicle to Nucleus about the XY
+     * plane). Use ROTXY=180 to flip a 180° yaw-mounted instrument. Settings are
+     * saved to persistent config (SAVE,CONFIG) after applying.
      *
-     * @param settings InstrumentSettings with rotxy, rotyz, rotxz in degrees [-180, 180]
+     * @param settings InstrumentSettings with rotxy, rotyz, rotxz in degrees
+     * [-180, 180]
      * @return NucleusStatusCode indicating success or failure
      */
-    NucleusStatusCode set_instrument_settings(const InstrumentSettings& settings);
+    NucleusStatusCode set_instrument_settings(
+        const InstrumentSettings& settings);
 
    private:
     void parse_available();
@@ -173,8 +179,10 @@ class NortekNucleusDriver {
     std::vector<uint8_t> buf;
     std::array<uint8_t, 4096> temp;
     std::size_t read_index = 0;
-    asio::ip::tcp::socket nucleus_sock_;
+    boost::asio::ip::tcp::socket nucleus_sock_;
     std::function<void(NortekNucleusFrame)> callback_;
 };
+
+}  // namespace vortex::drivers::dvl
 
 #endif  // NORTEK_NUCLEUS_DRIVER_HPP_

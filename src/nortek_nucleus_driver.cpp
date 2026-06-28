@@ -1,6 +1,6 @@
-#include "nortek_nucleus_driver.hpp"
-#include <asio/streambuf.hpp>
-#include <asio/write.hpp>
+#include "vortex/drivers/nortek_nucleus_driver.hpp"
+#include <boost/asio/streambuf.hpp>
+#include <boost/asio/write.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -8,150 +8,71 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include "nortek_nucleus_messages.hpp"
+#include "vortex/drivers/nortek_nucleus_messages.hpp"
+#include "vortex/drivers/nortek_nucleus_parser.hpp"
 
-namespace {
-
-template <typename T>
-T read_from_buffer(const uint8_t* data, std::size_t len, std::size_t offset) {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "read_from_buffer requires trivially copyable types");
-    T value{};
-    std::memcpy(&value, data + offset, sizeof(T));
-    return value;
-}
-
-SpectrumDatagram parse_spectrum_data(const uint8_t* data, std::size_t len) {
-    SpectrumDataV3 spectrum_data =
-        read_from_buffer<SpectrumDataV3>(data, len, 0);
-
-    const std::size_t data_offset = spectrum_data.data_offset;
-
-    const uint16_t bins = spectrum_data.num_beam_bins & 0x1FFF;
-    const uint8_t beams = spectrum_data.num_beam_bins >> 13;
-
-    SpectrumFrequencyHeader spectrum_freq_header =
-        read_from_buffer<SpectrumFrequencyHeader>(data, len, data_offset);
-
-    std::vector<int16_t> spectrum_freq_data(bins * beams);
-    const std::size_t num_bytes = sizeof(int16_t) * bins * beams;
-    std::memcpy(spectrum_freq_data.data(), data + data_offset + 64, num_bytes);
-
-    SpectrumDatagram spectrum_datagram{};
-    spectrum_datagram.spectrum = spectrum_data;
-    spectrum_datagram.freq_header = spectrum_freq_header;
-    spectrum_datagram.freq_data = spectrum_freq_data;
-
-    return spectrum_datagram;
-}
-
-ImuData parse_imu(const uint8_t* data, size_t len, size_t offset) {
-    ImuData imu_data{};
-    std::memcpy(&imu_data, data, 4);
-    std::memcpy(reinterpret_cast<uint8_t*>(&imu_data) + 4, data + offset,
-                sizeof(ImuData) - 4);
-    return imu_data;
-}
-
-AhrsDataV2 parse_ahrsv2_data(const uint8_t* data, size_t len, size_t offset){
-    AhrsDataV2 ahrs_v2{};
-    std::memcpy(&ahrs_v2, data + sizeof(CommonData), 24);
-    std::memcpy(reinterpret_cast<uint8_t*>(&ahrs_v2) + 24, data + offset,
-                sizeof(AhrsDataV2) - 24);
-    return ahrs_v2;
-}
-
-CurrentProfileDatagram parse_current_profile_data(const uint8_t* data,
-                                                  std::size_t len,
-                                                  std::size_t data_offset) {
-    CurrentProfileData current_profile_data =
-        read_from_buffer<CurrentProfileData>(data, len, sizeof(CommonData));
-
-    const uint16_t num_cells = current_profile_data.num_cells;
-
-    std::vector<CurrentProfileVelocityData> velocity_data(num_cells);
-    std::memcpy(velocity_data.data(), data + data_offset,
-                num_cells * sizeof(CurrentProfileVelocityData));
-    data_offset += num_cells * sizeof(CurrentProfileVelocityData);
-
-    std::vector<CurrentProfileAmplitudeData> amplitude_data(num_cells);
-    data_offset += num_cells * sizeof(CurrentProfileAmplitudeData);
-
-    std::vector<CurrentProfileCorrelationData> correlation_data(num_cells);
-    std::memcpy(correlation_data.data(), data + data_offset,
-                num_cells * sizeof(CurrentProfileCorrelationData));
-
-    CurrentProfileDatagram datagram{};
-    datagram.current_profle = current_profile_data;
-    datagram.velocity_data = velocity_data;
-    datagram.amplitude_data = amplitude_data;
-    datagram.correlation_data = correlation_data;
-    return datagram;
-}
-
-uint16_t calculate_checksum(const uint8_t* packet, size_t len) {
-    uint16_t sum = 0xB58C;
-
-    for (size_t i = 0; i < len; i += 2) {
-        sum += (uint16_t)(packet[i] | (packet[i + 1] << 8));
-    }
-
-    if (len & 1) {
-        sum += (uint16_t)(packet[len - 1] << 8);
-    }
-
-    return sum;
-}
-
-};  // namespace
+namespace vortex::drivers::dvl {
 
 NortekNucleusDriver::NortekNucleusDriver(
 
-    asio::io_context& io,
+    boost::asio::io_context& io,
     std::function<void(NortekNucleusFrame)> callback)
     : nucleus_sock_(io), callback_(callback) {}
 
-std::error_code NortekNucleusDriver::open_tcp_sockets(
+boost::system::error_code NortekNucleusDriver::open_tcp_sockets(
     const NortekConnectionParams& params) {
-    std::error_code ec;
-    auto addr = asio::ip::make_address(params.remote_ip, ec);
+    boost::system::error_code ec;
+
+    const auto addr = boost::asio::ip::make_address(params.remote_ip, ec);
+
     if (ec) {
         return ec;
     }
 
-    asio::ip::tcp::endpoint nucleus_endpoint(addr, params.data_remote_port);
+    const boost::asio::ip::tcp::endpoint nucleus_endpoint(
+        addr, params.data_remote_port);
+
     nucleus_sock_.connect(nucleus_endpoint, ec);
+
     if (ec) {
         return ec;
     }
+
     return {};
 }
 
-std::error_code NortekNucleusDriver::enter_password(
+boost::system::error_code NortekNucleusDriver::enter_password(
     const NortekConnectionParams& params) {
-    std::error_code ec;
+    boost::system::error_code ec;
 
-    asio::streambuf buffer;
+    boost::asio::streambuf buffer;
 
-    asio::read_until(nucleus_sock_, buffer, "Please enter password:", ec);
-    if (ec)
+    boost::asio::read_until(nucleus_sock_, buffer,
+                            "Please enter password:", ec);
+
+    if (ec) {
         return ec;
+    }
 
-    std::string msg = params.password + "\r\n";
-    asio::write(nucleus_sock_, asio::buffer(msg), ec);
+    const std::string msg = params.password + "\r\n";
+
+    boost::asio::write(nucleus_sock_, boost::asio::buffer(msg), ec);
 
     return ec;
 }
 
 void NortekNucleusDriver::start_read() {
     nucleus_sock_.async_read_some(
-        asio::buffer(temp), [this](std::error_code ec, std::size_t size) {
-            if (ec)
+        boost::asio::buffer(temp),
+        [this](const boost::system::error_code& ec, std::size_t size) {
+            if (ec) {
                 return;
+            }
 
-            const auto old = buf.size();
-            buf.resize(old + size);
-            std::memcpy(buf.data() + old, temp.data(), size);
+            const auto old_size = buf.size();
+            buf.resize(old_size + size);
+
+            std::memcpy(buf.data() + old_size, temp.data(), size);
 
             parse_available();
             start_read();
@@ -234,6 +155,8 @@ void NortekNucleusDriver::parse_available() {
         }
 
         dispatch(payload, payload_size, header);
+        read_index += needed;
+        continue;
     resync: {
         auto next = std::search(buf.begin() + read_index + 1, buf.end(),
                                 std::begin(PREAMBLE), std::end(PREAMBLE));
@@ -302,8 +225,7 @@ void NortekNucleusDriver::dispatch(const uint8_t* payload,
             break;
         }
         case DataSeriesId::AhrsData: {
-            callback_(parse_ahrsv2_data(payload, payload_size,
-                                                   data_offset));
+            callback_(parse_ahrsv2_data(payload, payload_size, data_offset));
             break;
         }
         case DataSeriesId::InsData: {
@@ -325,31 +247,39 @@ void NortekNucleusDriver::dispatch(const uint8_t* payload,
 
 NucleusReply NortekNucleusDriver::send_command(const std::string& cmd) {
     NucleusReply reply{};
-    std::error_code error_code{};
-    std::string msg = cmd + "\r\n";
-    asio::write(nucleus_sock_, asio::buffer(msg), error_code);
-    if (error_code) {
+
+    boost::system::error_code ec;
+
+    const std::string msg = cmd + "\r\n";
+
+    boost::asio::write(nucleus_sock_, boost::asio::buffer(msg), ec);
+
+    if (ec) {
         reply.status = NucleusStatusCode::SendFailed;
         return reply;
     }
 
-    asio::streambuf buf{};
-    std::size_t len = asio::read_until(nucleus_sock_, buf, "\r\n", error_code);
+    boost::asio::streambuf response_buffer;
 
-    if (error_code) {
+    boost::asio::read_until(nucleus_sock_, response_buffer, "\r\n", ec);
+
+    if (ec) {
         reply.status = NucleusStatusCode::ReadFailed;
         return reply;
     }
 
-    std::istream istream(&buf);
-    std::string resp;
-    std::getline(istream, resp);
+    std::istream stream(&response_buffer);
 
-    if (!resp.empty() && resp.back() == '\r')
-        resp.pop_back();
+    std::string response;
+    std::getline(stream, response);
+
+    if (!response.empty() && response.back() == '\r') {
+        response.pop_back();
+    }
 
     reply.status = NucleusStatusCode::Ok;
-    reply.payload = resp;
+    reply.payload = std::move(response);
+
     return reply;
 }
 
@@ -694,3 +624,5 @@ NucleusStatusCode NortekNucleusDriver::set_ahrs_settings(
     }
     return send_command(cmd).status;
 }
+
+}  // namespace vortex::drivers::dvl
