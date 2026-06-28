@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+namespace vortex::drivers::dvl {
+
 enum class DataSeriesId : uint8_t {
     SpectrumDataV3 = 0x20,
     ImuData = 0x82,
@@ -425,5 +427,7 @@ struct InstrumentSettings {
     double rotyz{0.0};  // Roll alignment offset [deg, -180..180]
     double rotxz{0.0};  // Pitch alignment offset [deg, -180..180]
 };
+
+} // namespace vortex::drivers::dvl
 
 #endif  // NORTEK_NUCLEUS_MESSAGES_HPP_
